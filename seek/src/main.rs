@@ -16,7 +16,7 @@ use std::time::Instant;
 /// Struct with parsed command line arguments
 #[derive(Parser, Debug, PartialEq)]
 struct Arguments {
-    /// The file stem name of the desired folder or file you are searching for
+    /// The file or directory you are looking for
     object: String,
 
     /// The extension of the file you are searching for if applicable
