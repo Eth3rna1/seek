@@ -86,12 +86,14 @@ impl Seek {
                     .file_stem()
                     .unwrap_or(OsStr::new(""))
                     .to_str()
-                    .unwrap_or("");
+                    .unwrap_or("")
+                    .to_lowercase();
                 let entry_extension = entry
                     .extension()
                     .unwrap_or(OsStr::new(""))
                     .to_str()
-                    .unwrap_or("");
+                    .unwrap_or("")
+                    .to_lowercase();
 
                 if entry_stem.contains(&object_lowercase)
                     && entry_extension.contains(&extension_lowercase)
