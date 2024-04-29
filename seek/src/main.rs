@@ -8,7 +8,7 @@ use cache::Cache;
 use clap::Parser;
 use seek::search_value;
 use seek::Seek;
-use std::env::current_dir;
+use std::env::{self, current_dir};
 use std::path::PathBuf;
 use std::process::exit;
 use std::time::Instant;
@@ -56,10 +56,10 @@ struct Arguments {
 impl Arguments {
     pub fn get_path(&self) -> String {
         if self.root {
-            #[cfg(target_os = "windows")]
-            return "c:\\".to_string();
-            #[cfg(not(target_os = "windows"))]
-            return "/".to_string();
+            match env::consts::OS {
+                "windows" => return "c:\\".to_string(),
+                _ => return "/".to_string(),
+            };
         } else if let Some(path) = &self.path {
             return path.to_string();
         }
@@ -96,7 +96,9 @@ async fn main() {
         // regardless if the client specified a name, the file name is reassigned without even if it's still `info.json`
         cache.name = args.name.clone();
         if args.log {
-            println!("Seeking...");
+            if !args.cache {
+                println!("Seeking...");
+            }
             if !cache.exists() {
                 cache.summon().expect("Unable to create the file");
                 println!("Created file `{}`.", &cache.name);
@@ -143,7 +145,9 @@ async fn main() {
         );
     } else {
         if args.log {
-            println!("Seeking...");
+            if !args.cache {
+                println!("Seeking...");
+            }
             let start = Instant::now();
             println!("Scanning directories...");
             seek.scan().await;
