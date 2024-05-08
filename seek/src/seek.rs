@@ -1,15 +1,56 @@
 /*
     Seeking functionality with asynchronous programming
 */
+use std::fs;
+use std::path::Path;
 use serde_json::Value;
 use std::ffi::OsStr;
 use std::ops::Deref;
 use std::path::PathBuf;
+use std::sync::{Arc, RwLock};
 use tokio::task::JoinHandle;
 use tqdm::tqdm;
 use walkdir::WalkDir;
 #[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
+
+/// Encapsulates the walking/traversing functionality along with a pointer that collects all the directories
+///
+/// PARAMETERS:
+/// -----------
+///                            &Path hint -> The path to the directory you want to start reading from
+///     Arc<RwLock<Vec<PathBuf>>> pointer -> Pointer to the collection of paths
+fn walk(hint : &Path, pointer : Arc<RwLock<Vec<PathBuf>>>) {
+    let mut objects = (*pointer).write().unwrap();
+    if hint.is_file() {
+        objects.push(hint.to_path_buf());
+        return ();
+    }
+    for entry in WalkDir::new(hint) {
+        if entry.is_err() {
+            continue;
+        }
+        let binding = entry.unwrap();
+        let entry = binding.path();
+        objects.push(entry.to_path_buf());
+    }
+}
+
+/// Function that returns the objects of a directory
+///
+/// PARAMETERS:
+/// -----------
+///     &Path hint -> The path to the directory you want to read
+fn path_entries(hint : &Path) -> Vec<PathBuf> {
+    let mut entries: Vec<PathBuf> = Vec::new();
+    for entry in fs::read_dir(hint).unwrap() {
+        if entry.is_err() {
+            continue;
+        }
+        entries.push(entry.unwrap().path().to_path_buf());
+    }
+    entries
+}
 
 /// Struct that contains the walking functionality
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -30,21 +71,22 @@ impl Seek {
 
     /// Scans all directories starting from the `.hint` field name you provided
     pub async fn scan(&mut self) {
-        let mut workers: Vec<JoinHandle<PathBuf>> = Vec::new();
-        for entry in WalkDir::new(&self.hint) {
-            if entry.is_err() {
-                continue;
-            }
-            let worker: JoinHandle<PathBuf> = tokio::spawn(async move {
-                let entry = entry.unwrap().path().to_path_buf();
-                entry
+        let paths: Arc<RwLock<Vec<PathBuf>>> = Arc::new(RwLock::new(Vec::new()));
+        let path_dirs = path_entries(&self.hint);
+        let mut workers: Vec<JoinHandle<()>> = Vec::new();
+        for dir in path_dirs { // commences separate threads from the child directories
+            let pointer = Arc::clone(&paths);
+            let worker = tokio::spawn(async move {
+                walk(&dir, pointer);
             });
             workers.push(worker);
         }
         for worker in workers {
-            let result = worker.await.unwrap();
-            self.objects.push(result);
+            let _ = worker.await;
         }
+        let binding = (*paths).read();
+        let paths = binding.unwrap();
+        self.objects = (*paths).to_owned();
     }
 
     /// Will return paths that resemble the arguments given depeding on what you give
