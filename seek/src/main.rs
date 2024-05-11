@@ -53,7 +53,7 @@ struct Arguments {
     name: String,
 
     /// Update the cache file. Use along with the --cache (-c) or --use-cache (-u) flags.
-    #[arg(long, name = "update")]
+    #[arg(long)]
     update_cache : bool
 }
 
