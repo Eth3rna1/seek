@@ -53,8 +53,8 @@ struct Arguments {
     name: String,
 
     /// Update the cache file. Use along with the --cache (-c) or --use-cache (-u) flags.
-    #[arg(long)]
-    update : bool
+    #[arg(long, name = "update")]
+    update_cache : bool
 }
 
 impl Arguments {
@@ -108,12 +108,12 @@ async fn main() {
                 println!("Created file `{}`.", &cache.name);
             } else { // nothing happens in this else statement
                 // Meaning cache file does exist
-                if args.update {
+                if args.update_cache {
                 // an if statement for more accurate logging messages
                     println!("Updating cache...");
                 }
             }
-            if !cache.made_today() || args.update {
+            if !cache.made_today() || args.update_cache {
                 println!("Scanning directories...");
                 let start = Instant::now();
                 seek.scan().await;
@@ -135,12 +135,12 @@ async fn main() {
                 cache.summon().expect("Unable to create the file");
             } else { // nothing happens in this else statement
                 // Meaning cache file does exist
-                if args.update {
+                if args.update_cache {
                 // an if statement for more accurate logging messages
                     println!("Updating cache...");
                 }
             }
-            if !cache.made_today() || args.update {
+            if !cache.made_today() || args.update_cache {
                 seek.scan().await;
                 let mut cache = Cache::new(&(*seek).clone());
                 cache.name = args.name;
