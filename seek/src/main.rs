@@ -106,6 +106,12 @@ async fn main() {
             if !cache.exists() {
                 cache.summon().expect("Unable to create the file");
                 println!("Created file `{}`.", &cache.name);
+            } else { // nothing happens in this else statement
+                // Meaning cache file does exist
+                if args.update {
+                // an if statement for more accurate logging messages
+                    println!("Updating cache...");
+                }
             }
             if !cache.made_today() || args.update {
                 println!("Scanning directories...");
@@ -127,6 +133,12 @@ async fn main() {
         } else {
             if !cache.exists() {
                 cache.summon().expect("Unable to create the file");
+            } else { // nothing happens in this else statement
+                // Meaning cache file does exist
+                if args.update {
+                // an if statement for more accurate logging messages
+                    println!("Updating cache...");
+                }
             }
             if !cache.made_today() || args.update {
                 seek.scan().await;
