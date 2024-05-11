@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use std::process::exit;
 use std::time::Instant;
 
-/// Struct with parsed command line arguments
+/// Seek files or directories from any child tree starting from your current directory or root directory
 #[derive(Parser, Debug, PartialEq)]
 struct Arguments {
     /// The file or directory you are looking for
@@ -51,13 +51,17 @@ struct Arguments {
     /// The name of the cache file
     #[arg(short, long, default_value_t = String::from("info.json"))]
     name: String,
+
+    /// Update the cache file. Use along with the --cache (-c) or --use-cache (-u) flags.
+    #[arg(long)]
+    update : bool
 }
 
 impl Arguments {
     pub fn get_path(&self) -> String {
         if self.root {
             match env::consts::OS {
-                "windows" => return "c:\\".to_string(),
+                "windows" => return "C:\\".to_string(),
                 _ => return "/".to_string(),
             };
         } else if let Some(path) = &self.path {
@@ -103,7 +107,7 @@ async fn main() {
                 cache.summon().expect("Unable to create the file");
                 println!("Created file `{}`.", &cache.name);
             }
-            if !cache.made_today() {
+            if !cache.made_today() || args.update {
                 println!("Scanning directories...");
                 let start = Instant::now();
                 seek.scan().await;
@@ -124,7 +128,7 @@ async fn main() {
             if !cache.exists() {
                 cache.summon().expect("Unable to create the file");
             }
-            if !cache.made_today() {
+            if !cache.made_today() || args.update {
                 seek.scan().await;
                 let mut cache = Cache::new(&(*seek).clone());
                 cache.name = args.name;
