@@ -58,7 +58,7 @@ struct Arguments {
     #[arg(long)]
     update_cache : bool,
 
-    /// The amount of depth of recursion wanted to search in
+    /// The amount of recursion wanted to search in
     #[arg(long, short)]
     depth : Option<usize>
 }
