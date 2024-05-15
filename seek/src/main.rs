@@ -13,6 +13,8 @@ use std::path::PathBuf;
 use std::process::exit;
 use std::time::Instant;
 
+const DEPTH: usize = 1_000_000;
+
 /// Seek files or directories from any child tree starting from your current directory or root directory
 #[derive(Parser, Debug, PartialEq)]
 struct Arguments {
@@ -54,7 +56,11 @@ struct Arguments {
 
     /// Update the cache file. Use along with the --cache (-c) or --use-cache (-u) flags.
     #[arg(long)]
-    update_cache : bool
+    update_cache : bool,
+
+    /// The amount of depth of recursion wanted to search in
+    #[arg(long, short)]
+    depth : Option<usize>
 }
 
 impl Arguments {
@@ -79,6 +85,12 @@ impl Arguments {
 async fn main() {
     let mut args = Arguments::parse();
     // separating the object from the extension
+    let depth: usize;
+    if let Some(_depth) = args.depth {
+        depth = _depth;
+    } else {
+        depth = DEPTH;
+    }
     let (object, extension) = tool::parse_object(&args.object);
     args.object = object;
     if args.object == "*" {
@@ -116,7 +128,7 @@ async fn main() {
             if !cache.made_today() || args.update_cache {
                 println!("Scanning directories...");
                 let start = Instant::now();
-                seek.scan().await;
+                seek.scan(depth).await;
                 let end = Instant::now();
                 println!("Scanned in: {:?}", end - start);
                 let mut cache = Cache::new(&(*seek).clone());
@@ -135,7 +147,7 @@ async fn main() {
                 cache.summon().expect("Unable to create the file");
             }
             if !cache.made_today() || args.update_cache {
-                seek.scan().await;
+                seek.scan(depth).await;
                 let mut cache = Cache::new(&(*seek).clone());
                 cache.name = args.name;
                 cache.save(&seek).expect("Unable to save cache!");
@@ -160,12 +172,12 @@ async fn main() {
             }
             let start = Instant::now();
             println!("Scanning directories...");
-            seek.scan().await;
+            seek.scan(depth).await;
             let end = Instant::now();
             println!("Scanned in: {:?}", end - start);
             println!("Searching...");
         } else {
-            seek.scan().await;
+            seek.scan(depth).await;
         }
         result = seek.search(
             &args.object,
