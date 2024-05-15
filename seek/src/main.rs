@@ -13,7 +13,7 @@ use std::path::PathBuf;
 use std::process::exit;
 use std::time::Instant;
 
-const DEPTH: usize = 1_000_000;
+const DEPTH: usize = 1_000_000; // default max depth
 
 /// Seek files or directories from any child tree starting from your current directory or root directory
 #[derive(Parser, Debug, PartialEq)]
