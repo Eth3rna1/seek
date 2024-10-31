@@ -2,9 +2,9 @@
     Caching functionality for faster performance
 */
 use crate::tool::{is_utf8, todays_day};
-use serde_json::json;
-use serde_json::to_string_pretty;
-use serde_json::Value;
+use serde_json::json;             // macro to convert a hashmap into JSON
+use serde_json::to_string_pretty; // converts a JSON object into a prettified string
+use serde_json::Value;            // A way to represent an object like a number or string from JSON
 use std::fs;
 use std::io::Result as IOResult;
 use std::path::PathBuf;

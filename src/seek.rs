@@ -14,27 +14,15 @@ use walkdir::WalkDir;
 #[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
 
-fn walk(hint : &Path, pointer : Arc<RwLock<Vec<PathBuf>>>, depth : usize) {
-    let mut depth: usize = depth;
-    let mut objects = (*pointer).write().unwrap();
-    if hint.is_file() {
-        objects.push(hint.to_path_buf());
-        return ();
-    }
+// if depth was to be implemented, it would be implemented in this function
+fn walk(hint : &Path) -> Vec<PathBuf> {
+    let mut entries: Vec<PathBuf> = Vec::new();
     for entry in WalkDir::new(hint) {
-        if entry.is_err() {
-            continue;
-        }
-        let binding = entry.unwrap();
-        let entry = binding.path();
-        if entry.is_dir() {
-            depth -= 1;
-            if depth == 0 {
-                break;
-            }
-        }
-        objects.push(entry.to_path_buf());
+        if entry.is_err() { continue }
+        let bind = entry.unwrap().path().to_path_buf();
+        entries.push(bind);
     }
+    entries
 }
 
 fn path_entries(hint : &Path) -> Vec<PathBuf> {
@@ -87,6 +75,7 @@ impl Seek {
 
     /// Scans all directories starting from the `.hint` field name you provided
     pub async fn scan(&mut self, _depth : usize) {
+        /*
         let paths: Arc<RwLock<Vec<PathBuf>>> = Arc::new(RwLock::new(Vec::new()));
         let path_dirs = path_entries(&self.hint);
         let mut workers: Vec<JoinHandle<()>> = Vec::new();
@@ -103,6 +92,67 @@ impl Seek {
         let binding = (*paths).read();
         let paths = binding.unwrap();
         self.objects = (*paths).to_owned();
+        */
+        let entries: Arc<RwLock<Vec<PathBuf>>> = Arc::new(RwLock::new(Vec::new()));
+        let initial_dirs: Vec<PathBuf> = {
+            let mut bind = Vec::new();
+            for i in fs::read_dir(&self.hint).unwrap() {
+                if i.is_err() { continue }
+                let i = i.unwrap().path();
+                if !i.is_dir() {
+                    let mut entries_ptr = entries.write().unwrap();
+                    entries_ptr.push(i.to_path_buf());
+                    continue;
+                }
+                bind.push(i.to_path_buf());
+            }
+            bind
+        };
+        let cores: usize = std::thread::available_parallelism().unwrap().into();
+        let jobs: Vec<Vec<PathBuf>> = {
+            let mut count = 0;
+            //let mut bind: Vec<Vec<PathBuf>> = (0..cores).map(|_| Vec::new()).collect();
+            let mut bind: Vec<Vec<PathBuf>> = Vec::new();
+            let mut buffer: Vec<PathBuf> = Vec::new();
+            // this is an internal anonymous function, does not return for the outer function
+            let max = (|n : usize, total : usize| {
+                if n < total { return n }
+                n / total
+            })(initial_dirs.len(), cores);
+            let mut count = 0;
+            for entry in initial_dirs.iter() {
+                if count == max {
+                    bind.push(buffer.clone());
+                    buffer.clear();
+                }
+                buffer.push(entry.to_owned());
+                count += 1;
+            }
+            // if buffer is not empty, increases the workload to the first core
+            if !buffer.is_empty() {
+                bind[0].extend(buffer);
+            }
+            bind
+        };
+        let mut threads: Vec<_> = Vec::new();
+        // starting up each core
+        for job in jobs {
+            let entry_ptr = Arc::clone(&entries);
+            let job = job.clone();
+            let thread = tokio::spawn(async move {
+                let mut entry_ptr_ptr = entry_ptr.write().unwrap();
+                for j in job {
+                    let result = walk(&j);
+                    entry_ptr_ptr.extend(result);
+                }
+            });
+            threads.push(thread);
+        }
+        for thread in threads {
+            let _ = thread.await;
+        }
+        let bind = entries.read().unwrap();
+        self.objects = bind.clone();
     }
 
     /// Will return paths that resemble the arguments given depeding on what you give
