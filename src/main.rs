@@ -123,7 +123,6 @@ async fn main() {
         }
         */
     }
-    dbg!(&args.object, &args.extension);
     let path = args.get_path();
     let mut seek = Seek::new(&path);
     let result: Option<Vec<PathBuf>>;
