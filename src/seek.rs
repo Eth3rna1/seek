@@ -25,17 +25,6 @@ fn walk(hint : &Path) -> Vec<PathBuf> {
     entries
 }
 
-fn path_entries(hint : &Path) -> Vec<PathBuf> {
-    let mut entries: Vec<PathBuf> = Vec::new();
-    for entry in fs::read_dir(hint).unwrap() {
-        if entry.is_err() {
-            continue;
-        }
-        entries.push(entry.unwrap().path().to_path_buf());
-    }
-    entries
-}
-
 /// Struct that contains the walking functionality
 #[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
