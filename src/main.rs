@@ -60,7 +60,11 @@ struct Arguments {
 
     /// The amount of recursion wanted to search in
     #[arg(long, short)]
-    depth : Option<usize>
+    depth : Option<usize>,
+
+    /// Indicates that the object contains no extension
+    #[arg(long)]
+    no_extension : bool
 }
 
 impl Arguments {
@@ -91,19 +95,35 @@ async fn main() {
     } else {
         depth = DEPTH;
     }
-    let (object, extension) = tool::parse_object(&args.object);
-    args.object = object;
+    let (object, extension): (String, Option<String>) = tool::parse_object(&args.object);
+    args.object = object.clone();
     if args.object == "*" {
         // making sure to follow file special characters
         args.object = String::from("");
     }
-    // if the extension flag wasn't raised and specified
+    // if the --extension (-e) flag wasn't raised,
+    // the extension will be assigned to the last splitted
+    // fragment of the string after it has been splitted by
+    // dots `.`
     if args.extension.is_none() {
+        // found a fragment that can be used as an extension and
+        // the --no-extension was not raised
+        //
+        // extension variable comes from the parsed string object in the command line
+        if !extension.is_none() && args.no_extension {
+            args.object = [object, extension.unwrap()].join(".");
+        } else if !extension.is_none() && !args.no_extension {
+            // reassigning the .extension field to the object
+            args.extension = Some(extension.unwrap().to_string());
+        }
+        /*
         if let Some(ref _ext) = extension {
             // reassigning the .extension field to the object
             args.extension = Some(_ext.to_string());
         }
+        */
     }
+    dbg!(&args.object, &args.extension);
     let path = args.get_path();
     let mut seek = Seek::new(&path);
     let result: Option<Vec<PathBuf>>;
