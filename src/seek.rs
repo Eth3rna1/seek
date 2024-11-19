@@ -119,7 +119,10 @@ impl Seek {
             }
             // if buffer is not empty, increases the workload to the first core
             if !buffer.is_empty() {
-                bind[0].extend(buffer);
+                match bind.len() {
+                    0 => bind.push(buffer),
+                    _ => bind[0].extend(buffer)
+                }
             }
             bind
         };
