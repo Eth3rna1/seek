@@ -64,25 +64,9 @@ impl Seek {
 
     /// Scans all directories starting from the `.hint` field name you provided
     pub async fn scan(&mut self, _depth : usize) {
-        /*
-        let paths: Arc<RwLock<Vec<PathBuf>>> = Arc::new(RwLock::new(Vec::new()));
-        let path_dirs = path_entries(&self.hint);
-        let mut workers: Vec<JoinHandle<()>> = Vec::new();
-        for dir in path_dirs {
-            let pointer = Arc::clone(&paths);
-            let worker = tokio::spawn(async move {
-                walk(&dir, pointer, _depth);
-            });
-            workers.push(worker);
-        }
-        for worker in workers {
-            let _ = worker.await;
-        }
-        let binding = (*paths).read();
-        let paths = binding.unwrap();
-        self.objects = (*paths).to_owned();
-        */
         let entries: Arc<RwLock<Vec<PathBuf>>> = Arc::new(RwLock::new(Vec::new()));
+        // the first starting directories which are then going
+        // to be scanned in individual threads.
         let initial_dirs: Vec<PathBuf> = {
             let mut bind = Vec::new();
             for i in fs::read_dir(&self.hint).unwrap() {
