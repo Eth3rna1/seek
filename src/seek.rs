@@ -14,10 +14,12 @@ use walkdir::WalkDir;
 #[cfg(feature = "serde")]
 use serde::{Serialize, Deserialize};
 
-// if depth was to be implemented, it would be implemented in this function
-fn walk(hint : &Path) -> Vec<PathBuf> {
+fn walk(hint : &Path, depth : usize) -> Vec<PathBuf> {
     let mut entries: Vec<PathBuf> = Vec::new();
+    let mut depth_count = 0;
     for entry in WalkDir::new(hint) {
+        if depth_count == depth { break; }
+        depth_count += 1;
         if entry.is_err() { continue }
         let bind = entry.unwrap().path().to_path_buf();
         entries.push(bind);
@@ -83,7 +85,6 @@ impl Seek {
         };
         let cores: usize = std::thread::available_parallelism().unwrap().into();
         let jobs: Vec<Vec<PathBuf>> = {
-            let mut count = 0;
             //let mut bind: Vec<Vec<PathBuf>> = (0..cores).map(|_| Vec::new()).collect();
             let mut bind: Vec<Vec<PathBuf>> = Vec::new();
             let mut buffer: Vec<PathBuf> = Vec::new();
@@ -118,7 +119,7 @@ impl Seek {
             let thread = tokio::spawn(async move {
                 let mut entry_ptr_ptr = entry_ptr.write().unwrap();
                 for j in job {
-                    let result = walk(&j);
+                    let result = walk(&j, _depth);
                     entry_ptr_ptr.extend(result);
                 }
             });
