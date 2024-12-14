@@ -19,10 +19,12 @@ fn walk(hint : &Path, depth : usize) -> Vec<PathBuf> {
     let mut depth_count = 0;
     for entry in WalkDir::new(hint) {
         if depth_count == depth { break; }
-        depth_count += 1;
+        //depth_count += 1;
         if entry.is_err() { continue }
-        let bind = entry.unwrap().path().to_path_buf();
-        entries.push(bind);
+        let bind = entry.unwrap();
+        let entry = bind.path();
+        if entry.is_dir() { depth_count += 1; }
+        entries.push(entry.to_path_buf());
     }
     entries
 }
