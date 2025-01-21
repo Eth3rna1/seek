@@ -64,7 +64,11 @@ struct Arguments {
 
     /// Indicates that the object contains no extension
     #[arg(long)]
-    no_extension : bool
+    no_extension : bool,
+
+    /// If the --use-cache flag was raised, the cache won't be updated regardless of its validation
+    #[arg(long, short)]
+    ignore_update : bool,
 }
 
 impl Arguments {
@@ -144,7 +148,7 @@ async fn main() {
                     println!("Updating cache...");
                 }
             }
-            if !cache.made_today() || args.update_cache {
+            if (!cache.made_today() || args.update_cache) && !args.ignore_update {
                 println!("Scanning directories...");
                 let start = Instant::now();
                 seek.scan(depth).await;
@@ -165,7 +169,7 @@ async fn main() {
             if !cache.exists() {
                 cache.summon().expect("Unable to create the file");
             }
-            if !cache.made_today() || args.update_cache {
+            if (!cache.made_today() || args.update_cache) && !args.ignore_update {
                 seek.scan(depth).await;
                 let mut cache = Cache::new(&(*seek).clone());
                 cache.name = args.name;
@@ -185,6 +189,7 @@ async fn main() {
             args.exact,
         );
     } else {
+        // normal seeking, no use of cache
         if args.log {
             if !args.cache {
                 println!("Seeking...");
