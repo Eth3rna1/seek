@@ -12,6 +12,7 @@ use std::env::{self, current_dir};
 use std::path::PathBuf;
 use std::process::exit;
 use std::time::Instant;
+use std::path::MAIN_SEPARATOR;
 
 const DEPTH: usize = 1_000_000; // default max depth
 
@@ -39,7 +40,7 @@ struct Arguments {
     /// If raised, instead of starting a new process,
     /// a file containing the files and directories will be created and read.
     /// NOTE: cache is ignored by default
-    #[arg(short, long, name = "use-cache")]
+    #[arg(short, long)]
     use_cache: bool,
 
     /// Outputs messages describing the process
@@ -79,7 +80,7 @@ impl Arguments {
                 _ => return "/".to_string(),
             };
         } else if let Some(path) = &self.path {
-            return path.to_string();
+            return path.replace("/", &MAIN_SEPARATOR.to_string());
         }
         current_dir()
             .unwrap_or(PathBuf::from("."))
@@ -110,10 +111,6 @@ async fn main() {
     // fragment of the string after it has been splitted by
     // dots `.`
     if args.extension.is_none() {
-        // found a fragment that can be used as an extension and
-        // the --no-extension was not raised
-        //
-        // extension variable comes from the parsed string object in the command line
         if !extension.is_none() && args.no_extension {
             args.object = [object, extension.unwrap()].join(".");
         } else if !extension.is_none() && !args.no_extension {
