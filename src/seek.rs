@@ -1,29 +1,33 @@
 /*
     Seeking functionality with asynchronous programming
 */
-use std::fs;
-use std::path::Path;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::ffi::OsStr;
+use std::fs;
 use std::ops::Deref;
+use std::path::Path;
 use std::path::PathBuf;
 use std::sync::{Arc, RwLock};
-use tokio::task::JoinHandle;
 use tqdm::tqdm;
 use walkdir::WalkDir;
-#[cfg(feature = "serde")]
-use serde::{Serialize, Deserialize};
 
-fn walk(hint : &Path, depth : usize) -> Vec<PathBuf> {
+fn walk(hint: &Path, depth: usize) -> Vec<PathBuf> {
     let mut entries: Vec<PathBuf> = Vec::new();
     let mut depth_count = 0;
     for entry in WalkDir::new(hint) {
-        if depth_count == depth { break; }
-        //depth_count += 1;
-        if entry.is_err() { continue }
+        if depth_count == depth {
+            break;
+        }
+        if entry.is_err() {
+            continue;
+        }
         let bind = entry.unwrap();
         let entry = bind.path();
-        if entry.is_dir() { depth_count += 1; }
+        if entry.is_dir() {
+            depth_count += 1;
+        }
         entries.push(entry.to_path_buf());
     }
     entries
@@ -46,35 +50,37 @@ impl Seek {
         }
     }
 
-//    /// Scans all directories starting from the `.hint` field name you provided
-//    pub async fn scan(&mut self) {
-//        let paths: Arc<RwLock<Vec<PathBuf>>> = Arc::new(RwLock::new(Vec::new()));
-//        let path_dirs = path_entries(&self.hint);
-//        let mut workers: Vec<JoinHandle<()>> = Vec::new();
-//        for dir in path_dirs {
-//            let pointer = Arc::clone(&paths);
-//            let worker = tokio::spawn(async move {
-//                walk(&dir, pointer);
-//            });
-//            workers.push(worker);
-//        }
-//        for worker in workers {
-//            let _ = worker.await;
-//        }
-//        let binding = (*paths).read();
-//        let paths = binding.unwrap();
-//        self.objects = (*paths).to_owned();
-//    }
+    //    /// Scans all directories starting from the `.hint` field name you provided
+    //    pub async fn scan(&mut self) {
+    //        let paths: Arc<RwLock<Vec<PathBuf>>> = Arc::new(RwLock::new(Vec::new()));
+    //        let path_dirs = path_entries(&self.hint);
+    //        let mut workers: Vec<JoinHandle<()>> = Vec::new();
+    //        for dir in path_dirs {
+    //            let pointer = Arc::clone(&paths);
+    //            let worker = tokio::spawn(async move {
+    //                walk(&dir, pointer);
+    //            });
+    //            workers.push(worker);
+    //        }
+    //        for worker in workers {
+    //            let _ = worker.await;
+    //        }
+    //        let binding = (*paths).read();
+    //        let paths = binding.unwrap();
+    //        self.objects = (*paths).to_owned();
+    //    }
 
     /// Scans all directories starting from the `.hint` field name you provided
-    pub async fn scan(&mut self, _depth : usize) {
+    pub async fn scan(&mut self, _depth: usize) {
         let entries: Arc<RwLock<Vec<PathBuf>>> = Arc::new(RwLock::new(Vec::new()));
         // the first starting directories which are then going
         // to be scanned in individual threads.
         let initial_dirs: Vec<PathBuf> = {
             let mut bind = Vec::new();
             for i in fs::read_dir(&self.hint).unwrap() {
-                if i.is_err() { continue }
+                if i.is_err() {
+                    continue;
+                }
                 let i = i.unwrap().path();
                 if !i.is_dir() {
                     let mut entries_ptr = entries.write().unwrap();
@@ -86,36 +92,19 @@ impl Seek {
             bind
         };
         let cores: usize = std::thread::available_parallelism().unwrap().into();
-        let jobs: Vec<Vec<PathBuf>> = {
-            //let mut bind: Vec<Vec<PathBuf>> = (0..cores).map(|_| Vec::new()).collect();
-            let mut bind: Vec<Vec<PathBuf>> = Vec::new();
-            let mut buffer: Vec<PathBuf> = Vec::new();
-            // this is an internal anonymous function, does not return for the outer function
-            let max = (|n : usize, total : usize| {
-                if n < total { return n }
-                n / total
-            })(initial_dirs.len(), cores);
-            let mut count = 0;
+        let jobs_per_core: Vec<Vec<PathBuf>> = {
+            let mut buffers: Vec<Vec<PathBuf>> = (0..cores).map(|_| Vec::new()).collect();
+            let mut pointer: usize = 0;
             for entry in initial_dirs.iter() {
-                if count == max {
-                    bind.push(buffer.clone());
-                    buffer.clear();
+                if pointer == buffers.len() {
+                    pointer = 0;
                 }
-                buffer.push(entry.to_owned());
-                count += 1;
+                buffers[pointer].push(entry.to_owned());
             }
-            // if buffer is not empty, increases the workload to the first core
-            if !buffer.is_empty() {
-                match bind.len() {
-                    0 => bind.push(buffer),
-                    _ => bind[0].extend(buffer)
-                }
-            }
-            bind
+            buffers.into_iter().filter(|buf| !buf.is_empty()).collect()
         };
         let mut threads: Vec<_> = Vec::new();
-        // starting up each core
-        for job in jobs {
+        for job in jobs_per_core {
             let entry_ptr = Arc::clone(&entries);
             let job = job.clone();
             let thread = tokio::spawn(async move {

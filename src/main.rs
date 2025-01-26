@@ -10,9 +10,9 @@ use seek::search_value;
 use seek::Seek;
 use std::env::{self, current_dir};
 use std::path::PathBuf;
+use std::path::MAIN_SEPARATOR;
 use std::process::exit;
 use std::time::Instant;
-use std::path::MAIN_SEPARATOR;
 
 const DEPTH: usize = 1_000_000; // default max depth
 
@@ -57,19 +57,19 @@ struct Arguments {
 
     /// Update the cache file. Use along with the --cache (-c) or --use-cache (-u) flags.
     #[arg(long)]
-    update_cache : bool,
+    update_cache: bool,
 
     /// The amount of recursion wanted to search in
     #[arg(long, short)]
-    depth : Option<usize>,
+    depth: Option<usize>,
 
     /// Indicates that the object contains no extension
     #[arg(long)]
-    no_extension : bool,
+    no_extension: bool,
 
     /// If the --use-cache flag was raised, the cache won't be updated regardless of its validation
     #[arg(long, short)]
-    ignore_update : bool,
+    ignore_update: bool,
 }
 
 impl Arguments {
@@ -138,10 +138,11 @@ async fn main() {
             if !cache.exists() {
                 cache.summon().expect("Unable to create the file");
                 println!("Created file `{}`.", &cache.name);
-            } else { // nothing happens in this else statement
+            } else {
+                // nothing happens in this else statement
                 // Meaning cache file does exist
                 if args.update_cache {
-                // an if statement for more accurate logging messages
+                    // an if statement for more accurate logging messages
                     println!("Updating cache...");
                 }
             }
