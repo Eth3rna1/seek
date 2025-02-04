@@ -6,6 +6,7 @@ mod seek;
 mod tool;
 use cache::Cache;
 use clap::Parser;
+use clipboard::{ClipboardContext, ClipboardProvider};
 use seek::search_value;
 use seek::Seek;
 use std::env::{self, current_dir};
@@ -33,7 +34,7 @@ struct Arguments {
     /// The path by which you want to start searching, DEFAULT = current working directory
     #[arg(short, long)]
     path: Option<String>,
-    /// If raised, the search will start from the root directory `c:\\`
+    /// If raised, the search will start from the root directory
     #[arg(short, long)]
     root: bool,
 
@@ -70,6 +71,10 @@ struct Arguments {
     /// If the --use-cache flag was raised, the cache won't be updated regardless of its validation
     #[arg(long, short)]
     ignore_update: bool,
+
+    /// Copy a path onto the clipboard with its index
+    #[arg(long)]
+    copy: Option<usize>,
 }
 
 impl Arguments {
@@ -208,6 +213,24 @@ async fn main() {
         );
     }
     if let Some(paths) = result {
+        if let Some(mut index) = args.copy {
+            if index == 0 {
+                exit(1);
+            }
+            index = index - 1;
+            if index >= paths.len() {
+                eprintln!(
+                    "Not a valid index, index specified `{}`, total paths: `{}`",
+                    index,
+                    paths.len()
+                );
+                exit(1);
+            }
+            let mut clipboard_ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+            clipboard_ctx
+                .set_contents(paths[index].display().to_string())
+                .expect("Could not copy contents into the clipboard");
+        }
         let interface = tool::string_interface(&paths);
         println!("{}", interface);
     } else {
