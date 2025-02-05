@@ -34,7 +34,7 @@ Searches for an object with "example" in its stem name and "exe" in its extensio
 |--cache| -c | Caches the entire sought directories and saves them into a JSON file, then exits |
 |--use-cache| -u | Indicates to not search, rather to read from the cache file |
 |--update-cache| | Forces an update on the cache |
-|--ignore-update| -i | Ignores the invalidity of the cache and uses the cache anyway |
+|--ignore-update| -i | Ignores the invalidity of the cache and uses the cache anyway; must be used along with the --use-cache flag |
 |--name| -n | Used to specify the cache file name, by default, the name is "info.json"|
 
 ### Aftermath Flags
