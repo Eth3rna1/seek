@@ -52,9 +52,9 @@ struct Arguments {
     #[arg(short, long)]
     cache: bool,
 
-    /// The name of the cache file
-    #[arg(short, long, default_value_t = String::from("info.json"))]
-    name: String,
+    /// The path to the cache file; default is `./info.json`
+    #[arg(long, default_value_t = String::from("./info.json"))]
+    cache_location: String,
 
     /// Update the cache file. Use along with the --cache (-c) or --use-cache (-u) flags.
     #[arg(long)]
@@ -135,7 +135,7 @@ async fn main() {
     if args.use_cache || args.cache {
         let mut cache = Cache::new(&Vec::new());
         // regardless if the client specified a name, the file name is reassigned without even if it's still `info.json`
-        cache.name = args.name.clone();
+        cache.name = args.cache_location.clone();
         if args.log {
             if !args.cache {
                 println!("Seeking...");
@@ -158,7 +158,7 @@ async fn main() {
                 let end = Instant::now();
                 println!("Scanned in: {:?}", end - start);
                 let mut cache = Cache::new(&(*seek).clone());
-                cache.name = args.name;
+                cache.name = args.cache_location;
                 println!("Saving cache...");
                 cache.save(&seek).expect("Unable to save cache!");
                 println!("Cache saved.");
@@ -175,7 +175,7 @@ async fn main() {
             if (!cache.made_today() || args.update_cache) && !args.ignore_update {
                 seek.scan(depth).await;
                 let mut cache = Cache::new(&(*seek).clone());
-                cache.name = args.name;
+                cache.name = args.cache_location;
                 cache.save(&seek).expect("Unable to save cache!");
             }
             if args.cache {
