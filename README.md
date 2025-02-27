@@ -5,14 +5,36 @@ The `seek` binary is a tool used to quickly find directories, files, or symbolic
 
 ## Getting Started
 The seek binary implements various flags, the only argument that you only need to worry about is the `<OBJECT>` argument.
-The searching process is case insensitive and doesn't look for the exact object given, rather it separates the stem from
-the extension and compares each file path's base name by checking if the path's base name contains the specified object's stem and extension by default.
+The searching process is case insensitive and doesn't look for the exact object match by default, rather it separates the stem from the extension and compares each file path's base name by checking if the path's base name contains the specified object's stem and extension by default.
 
-### Usage
+### Example
+Searches for an object with "example" in its stem name and "exe" in its extension.
 ```console
 seek example.exe
 ```
-Searches for an object with "example" in its stem name and "exe" in its extension, if its a file.
+Based on the matches, the example sought objects can be:
+
+An exact match
+```text
+example.exe
+```
+Or
+
+A match where the object includes your target object in the name and extension
+```text
+1.) example__but_with_a_longer_name.exe
+```
+Or
+
+A mixture of both instances regarding the extension and stem
+```text
+1.) example__but_with_a_longer_name.executable
+```
+
+**The only way to enforce an exact match is by using the (--exact) flag**
+```console
+seek example.exe --exact
+```
 
 ### Configuration Flags
 
