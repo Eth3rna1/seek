@@ -1,6 +1,7 @@
 /*
     Seeking functionality with asynchronous programming
 */
+use crate::tool::format_num;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -13,9 +14,46 @@ use std::sync::{Arc, RwLock};
 use tqdm::tqdm;
 use walkdir::WalkDir;
 
-fn walk(hint: &Path, depth: usize) -> Vec<PathBuf> {
+static mut COUNTER: usize = 1; // 1, to count the the current working directory
+static mut ERROR_COUNTER: usize = 0;
+static mut SUCCESSFUL_COUNTER: usize = 0;
+
+fn walk(hint: &Path, depth: usize, log: bool) -> Vec<PathBuf> {
     let mut entries: Vec<PathBuf> = Vec::new();
     let mut depth_count = 0;
+    if log {
+        for entry in WalkDir::new(hint) {
+            unsafe {
+                print!(
+                    "\rCame across {} entries with {} errors = {} successful",
+                    format_num(COUNTER),
+                    format_num(ERROR_COUNTER),
+                    format_num(SUCCESSFUL_COUNTER)
+                );
+                COUNTER += 1;
+            }
+            if depth_count == depth {
+                break;
+            }
+            if entry.is_err() {
+                unsafe {
+                    ERROR_COUNTER += 1;
+                }
+                continue;
+            }
+            unsafe {
+                SUCCESSFUL_COUNTER += 1;
+            }
+            let bind = entry.unwrap();
+            let entry = bind.path();
+            if entry.is_dir() {
+                depth_count += 1;
+            }
+            entries.push(entry.to_path_buf());
+        }
+        //print!("\n");
+        return entries;
+    }
     for entry in WalkDir::new(hint) {
         if depth_count == depth {
             break;
@@ -71,15 +109,22 @@ impl Seek {
     //    }
 
     /// Scans all directories starting from the `.hint` field name you provided
-    pub async fn scan(&mut self, _depth: usize) {
+    pub async fn scan(&mut self, _depth: usize, log: bool) {
         let entries: Arc<RwLock<Vec<PathBuf>>> = Arc::new(RwLock::new(Vec::new()));
         // the first starting directories which are then going
         // to be scanned in individual threads.
         let initial_dirs: Vec<PathBuf> = {
             let mut bind = Vec::new();
             for i in fs::read_dir(&self.hint).unwrap() {
+                unsafe {
+                    COUNTER += 1;
+                }
                 if i.is_err() {
+                    unsafe { ERROR_COUNTER += 1 }
                     continue;
+                }
+                unsafe {
+                    SUCCESSFUL_COUNTER += 1;
                 }
                 let i = i.unwrap().path();
                 if !i.is_dir() {
@@ -110,7 +155,7 @@ impl Seek {
             let thread = tokio::spawn(async move {
                 let mut entry_ptr_ptr = entry_ptr.write().unwrap();
                 for j in job {
-                    let result = walk(&j, _depth);
+                    let result = walk(&j, _depth, log);
                     entry_ptr_ptr.extend(result);
                 }
             });

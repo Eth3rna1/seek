@@ -154,9 +154,9 @@ async fn main() {
             if (!cache.made_today() || args.update_cache) && !args.ignore_update {
                 println!("Scanning directories...");
                 let start = Instant::now();
-                seek.scan(depth).await;
+                seek.scan(depth, args.log).await;
                 let end = Instant::now();
-                println!("Scanned in: {:?}", end - start);
+                println!("\nScanned in: {:?}", end - start);
                 let mut cache = Cache::new(&(*seek).clone());
                 cache.name = args.cache_location;
                 println!("Saving cache...");
@@ -173,7 +173,7 @@ async fn main() {
                 cache.summon().expect("Unable to create the file");
             }
             if (!cache.made_today() || args.update_cache) && !args.ignore_update {
-                seek.scan(depth).await;
+                seek.scan(depth, args.log).await;
                 let mut cache = Cache::new(&(*seek).clone());
                 cache.name = args.cache_location;
                 cache.save(&seek).expect("Unable to save cache!");
@@ -199,12 +199,12 @@ async fn main() {
             }
             let start = Instant::now();
             println!("Scanning directories...");
-            seek.scan(depth).await;
+            seek.scan(depth, args.log).await;
             let end = Instant::now();
-            println!("Scanned in: {:?}", end - start);
+            println!("\nScanned in: {:?}", end - start);
             println!("Searching...");
         } else {
-            seek.scan(depth).await;
+            seek.scan(depth, args.log).await;
         }
         result = seek.search(
             &args.object,

@@ -60,3 +60,17 @@ pub fn parse_object(object: &str) -> (String, Option<String>) {
         }
     }
 }
+
+pub fn format_num(n: usize) -> String {
+    let mut buffer: Vec<char> = Vec::new();
+    let mut i: usize = 0;
+    for c in n.to_string().chars().rev() {
+        if i % 3 == 0 && i != 0 {
+            buffer.push(',');
+        }
+        buffer.push(c);
+        i += 1;
+    }
+    buffer.reverse();
+    buffer.iter().collect()
+}
