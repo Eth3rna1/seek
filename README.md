@@ -36,6 +36,17 @@ A mixture of both instances regarding the extension and stem
 seek example.exe --exact
 ```
 
+To look for objects with only regarding to the extension, you can replace the stem name with a `*`.
+```console
+seek *.exe
+```
+returns
+```text
+1.) bin1.exe
+2.) thisisabin.exe
+3.) example.exe
+```
+
 ## Flags
 ### Configuration Flags
 
