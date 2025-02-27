@@ -52,7 +52,7 @@ struct Arguments {
     #[arg(short, long)]
     cache: bool,
 
-    /// The path to the cache file; default is `./info.json`
+    /// The path to the cache file along with its JSON file name
     #[arg(long, default_value_t = String::from("./info.json"))]
     cache_location: String,
 

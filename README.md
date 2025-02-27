@@ -35,7 +35,7 @@ Searches for an object with "example" in its stem name and "exe" in its extensio
 |--use-cache| -u | Indicates to not search, rather to read from the cache file |
 |--update-cache| | Forces an update on the cache |
 |--ignore-update| -i | Ignores the invalidity of the cache and uses the cache anyway; must be used along with the --use-cache flag |
-|--name| -n | Used to specify the cache file name, by default, the name is "info.json"|
+|--cache-location| | Used to specify the cache file location along with its JSON file name. [default: ./info.json]|
 
 ### Aftermath Flags
 
