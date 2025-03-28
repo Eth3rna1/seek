@@ -164,8 +164,7 @@ async fn main() -> Result<()> {
         let end = Instant::now();
         let data: Data = Data::from(result.paths);
         if args.log {
-            println!("Cached into `{}`", cache.location().display());
-            println!("Scanned in: {:?}", end - start);
+            println!("\nScanned in: {:?}\n", end - start);
             println!("Success: {}", utils::format_num(result.success_count));
             println!("Errors: {}", utils::format_num(result.error_count));
         }
@@ -176,6 +175,7 @@ async fn main() -> Result<()> {
         println!("Searching...");
     }
     let query: Regex = build_regex(args.query, args.cs, args.exact)?;
+    let start = Instant::now();
     let matches: Vec<String> = search(
         &data.data,
         query,
@@ -184,12 +184,16 @@ async fn main() -> Result<()> {
         args.files,
         args.symlinks,
     );
+    let end = Instant::now();
     if matches.is_empty() {
         eprintln!("\nNo matches were found.\n");
         exit(1);
     }
     // Displays the interface
     println!("\n{}\n", utils::pretty_interface(&matches));
+    if args.log {
+        println!("Searched in: {:?}\n", end - start);
+    }
     // An interface to select and copy a path
     utils::copy_shell(&matches);
     Ok(())
