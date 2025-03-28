@@ -192,8 +192,5 @@ async fn main() -> Result<()> {
     println!("\n{}\n", utils::pretty_interface(&matches));
     // An interface to select and copy a path
     utils::copy_shell(&matches);
-    if args.log {
-        println!("Copied path onto the clipboard");
-    }
     Ok(())
 }

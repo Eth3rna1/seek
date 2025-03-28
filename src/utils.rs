@@ -92,6 +92,7 @@ Or press `Enter` to exit"
         }
         if let Some(value) = options.evaluate(&response) {
             copy(value);
+            println!("Copied path onto the clipboard");
             return;
         }
     }
