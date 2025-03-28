@@ -92,7 +92,7 @@ could return
 |--symlinks|-s| Indicates to exclusively consider symbolic links|
 | --root | -r | Indicates to start searching from root |
 | --log | -l | Prints out the state of the program throughout execution |
-| --depth | -d | The depth in subdirectories to search |
+| --depth | | The depth in subdirectories to search |
 |--help| -h | Used to display the help message|
 
 ### Cache Flags
