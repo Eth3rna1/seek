@@ -1,18 +1,50 @@
 # Seek
 
 ## About
-The `seek` binary is a tool used to quickly find directories, files, or symbolic links via the command line; hence "seek".
+The `seek` binary is a tool used to quickly find directories, files, and symbolic links via the command line; hence **seek**.
 
 ## Getting Started
-The seek binary implements various flags, the only argument that you only need to worry about is the `<OBJECT>` argument.
-The searching process is case insensitive and doesn't look for the exact object match by default, rather it separates the stem from the extension and compares each file path's base name by checking if the path's base name contains the specified object's stem and extension.
+The `seek` binary only cares about one parameter, the `query` parameter, which is meant to be a regular expression string.
+Keep in mind that the query is going to be matching the basename of each path. Take the following as an example:
+
+> Path `c:\\this\\is\\a\\file.txt` will take `file.txt` and compare it to the regular expression query.
+
+The binary also doesn't automatically cache.
+To start making use of the cache, you'd need to include the `--use-cache` (`-u`) flag, which will then
+start applying the cache logic.
+
+The binary searches with a case insensitive query by default.
+If you wish to make your query case sensitive, raise the `--cs` flag.
+
+When using the flags `--files` (`-f`), `--dirs` (`-d`), and `--symlinks` (`-s`), which indicate what objects to consider.
+By default, the program considers all object types.
+If you wish to consider one or more object types, simply raise the flag you wish the program to consider.
+
+Example:
+
+> seek .+ -s -d
+
+The previous example will indicate to the program to only consider symbolic links and directories.
+
+
+## Things to consider
+There are reserved characters in the windows terminals such as the `|` and the `^` characters.
+
+If you need to bypass such reserved characters in your terminal, you can prefix them with the following characters:
+
+|Operating System Terminal|Character| Example|
+|-------------------------|---------|--------|
+|Windows CMD|`^`|`seek main\.(cpp^\|rs)`|
+|Windows PowerShell|`` ` ``|``seek main\.\`(cpp\`\|rs\`)``|
+|Linux and MacOS|`\`|`seek main\.\(cpp\|rs\)`|
+
 
 ## Examples
 Searches for an object with "example" in its stem name and "exe" in its extension.
 ```console
 seek example.exe
 ```
-Based on the matches, the example sought objects can be:
+Based on the regex, the sought example could be:
 
 An exact match
 ```text
@@ -22,25 +54,26 @@ Or
 
 A match where the object includes your target object in the name and extension
 ```text
-1.) example__but_with_a_longer_name.exe
+1.) example__but_with_a_longer_name_example.exe
 ```
 Or
 
 A mixture of both instances regarding the extension and stem
 ```text
-1.) example__but_with_a_longer_name.executable
+1.) example__but_with_a_longer_name_example.executable
 ```
 
-**The only way to enforce an exact match is by using the (--exact) flag**
+**The only way to enforce an exact match is by using the `--exact` (`-e`) flag, which will escape special characters**
 ```console
-seek example.exe --exact
+seek example.exe -e
 ```
 
-To look for objects with only regarding to the extension, you can replace the stem name with a `*`.
+To look for objects with only regarding the extension, you can end the query with `$`.
+To better the regex, you can prefix the query with `\.`, which specifies a literal period.
 ```console
-seek *.exe
+seek \.exe$
 ```
-returns
+could return
 ```text
 1.) bin1.exe
 2.) thisisabin.exe
@@ -52,14 +85,15 @@ returns
 
 | Flag | Alias | Description |
 |------|-|-------------|
-|--extension| -e | The extension of the file you are searching for if applicable; generally not needed since its handled automatically|
-|--exact|  | Searches for an exact match on regarding the basename and extension, if any|
+|--exact|-e| Searches for an exact match on regarding the regular expression query|
 | --path | -p | Indicates the path on where to start searching; the default path is the current working directory |
+|--files| -f | Indicates to exclusively consider files |
+|--dirs| -d | Indicates to exclusively consider directories|
+|--symlinks|-s| Indicates to exclusively consider symbolic links|
 | --root | -r | Indicates to start searching from root |
-| --log | -l | Prints out the state of the program throughout the runtime |
-| --depth | -d | The depth in subdirectories you'd like to search |
-| --no-extension |  | Indicates that the object does not contain an extension; helpful when the object contains multiple periods within the name |
-|--help| -h | Use to display the help message|
+| --log | -l | Prints out the state of the program throughout execution |
+| --depth | -d | The depth in subdirectories to search |
+|--help| -h | Used to display the help message|
 
 ### Cache Flags
 
@@ -70,10 +104,3 @@ returns
 |--update-cache| | Forces an update on the cache |
 |--ignore-update| -i | Ignores the invalidity of the cache and uses the cache anyway; must be used along with the --use-cache flag |
 |--cache-location| | Used to specify the cache file location along with its JSON file name. [default: ./info.json]|
-
-### Aftermath Flags
-
-| Flag | Alias | Description |
-|------|-|-------------|
-| --copy |  | Use to copy a specific path onto your clipboard via its index|
-
