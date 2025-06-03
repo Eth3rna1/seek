@@ -183,7 +183,8 @@ async fn main() -> Result<()> {
         args.dirs,
         args.files,
         args.symlinks,
-    );
+    )
+    .await?;
     let end = Instant::now();
     if matches.is_empty() {
         eprintln!("\nNo matches were found.\n");

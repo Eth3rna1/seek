@@ -33,13 +33,8 @@ pub fn format_num(n: usize) -> String {
 /// Attempts to evenly distribute an array into smaller buffers
 pub fn distribute<T: Clone>(array: &[T], amount: usize) -> Vec<Vec<T>> {
     let mut buffer: Vec<Vec<T>> = (0..amount).map(|_| Vec::new()).collect();
-    let mut pointer: usize = 0;
-    for item in array {
-        if pointer == buffer.len() {
-            pointer = 0;
-        }
-        buffer[pointer].push(item.clone());
-        pointer += 1;
+    for i in 0..array.len() {
+        buffer[i % amount].push(array[i].clone());
     }
     buffer.into_iter().filter(|buf| !buf.is_empty()).collect()
 }
