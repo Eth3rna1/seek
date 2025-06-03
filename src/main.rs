@@ -125,7 +125,14 @@ async fn main() -> Result<()> {
         // obtaining the data from cache
         cache.summon()?;
         let data: Data = if cache.is_valid() && !args.update_cache {
-            // if cache is valid
+            // if cache is valid and user didn't specify to update the cache
+            if args.cache {
+                // it doesn't matter if the cache is valid,
+                // raising the --cache (-c) flag is reserved for
+                // solely caching; early exits. Otherwise, the user
+                // should be using the --update-cache flag to force an update.
+                exit(0); // user just wanted to cache
+            }
             cache.read()?
         } else {
             // if cache is invalid or user wants to force an update
