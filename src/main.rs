@@ -77,7 +77,7 @@ struct Arguments {
     exact: bool,
 
     /// The cache location to store or read from
-    #[arg(long, default_value_t=String::from("./info.json"))]
+    #[arg(long, default_value_t=String::from("./.info.json"))]
     cache_location: String,
 
     /// Signals to only scan and cache without any search

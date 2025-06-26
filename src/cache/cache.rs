@@ -21,7 +21,7 @@ pub struct Cache {
 impl Cache {
     /// Initializes Cache. Location must include the cache file name.
     ///
-    /// Default: ./info.json
+    /// Default: ./.info.json
     pub fn new(location: &str) -> Self {
         Self {
             location: PathBuf::from(location),
