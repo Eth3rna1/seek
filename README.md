@@ -3,6 +3,26 @@
 ## About
 The `seek` binary is a tool used to quickly find directories, files, and symbolic links via the command line; hence **seek**.
 
+## Installation
+
+### Download the Windows Binary via Command Line
+
+You can download the latest Windows binary directly using one of the following commands:
+
+#### Using curl (Windows 10+):
+
+```cmd
+curl -L -o seek.exe https://github.com/Eth3rna1/seek/releases/download/v2.1.4/seek.exe
+```
+
+#### Using PowerShell
+```cmd
+Invoke-WebRequest -Uri "https://github.com/Eth3rna1/seek/releases/download/v2.1.4/seek.exe" -OutFile "seek.exe"
+```
+
+#### Manual Download
+Alternatively, you can download the binary manually from the [Releases page](https://github.com/Eth3rna1/seek/releases/tag/v2.1.4)
+
 ## Getting Started
 The `seek` binary only cares about one parameter, the `query` parameter, which is meant to be a regular expression string.
 Keep in mind that the query is going to be matching the basename of each path. Take the following as an example:
