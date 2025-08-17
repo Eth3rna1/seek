@@ -16,6 +16,8 @@ impl<'o> Options<'o> {
         match choice.parse::<usize>() {
             Ok(int) => {
                 if int <= 0 || int > self.options.len() {
+                    // if integer is less than or equal to 0
+                    // or integer is greater than options length
                     return None;
                 }
                 return Some(self.options[int - 1].to_owned());

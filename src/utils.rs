@@ -10,8 +10,24 @@ use clipboard::{ClipboardContext, ClipboardProvider};
 
 // Using the standard library
 use std::fmt::Display;
+use std::fs::write;
+use std::fs::OpenOptions;
+use std::io::Result;
 use std::io::{self, Write};
 use std::str::from_utf8;
+
+
+/// An abstract function to write string content into a file
+/// giving the option to append to such file via a parameter
+pub fn write_to(loc: String, content: String, append: bool) -> Result<()> {
+    if append {
+        let mut file = OpenOptions::new().append(true).open(loc)?;
+        file.write_all(("\n".to_owned() + &content).as_bytes())?;
+        return Ok(());
+    }
+    write(loc, content)?;
+    Ok(())
+}
 
 /// Adds commas to a large number
 pub fn format_num(n: usize) -> String {
@@ -46,10 +62,14 @@ pub fn todays_day() -> u8 {
 }
 
 /// Returns a pretty interface like list for the user to view
-pub fn pretty_interface(data: &[String]) -> String {
+pub fn pretty_interface(data: &[String], enumerate: bool) -> String {
     let mut buffer: Vec<String> = Vec::new();
     for (i, n) in data.iter().enumerate() {
-        buffer.push(format!("{}.) {}", i + 1, n));
+        buffer.push(if enumerate {
+            format!("{}.) {}", i + 1, n)
+        } else {
+            n.to_owned()
+        });
     }
     buffer.join("\n")
 }

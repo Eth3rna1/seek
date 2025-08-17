@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.2.0] - 2025-08-17
+- Added 3 flags for writing result output into a file
+  - `--output-file` (-o)
+  - `--append` (-a)
+  - `--enumerate`
+
 ## [2.1.4] - 2025-07-14
 ### Added
 - Included a `CHANGELOG.md` file to keep track of changes

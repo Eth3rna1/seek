@@ -63,6 +63,18 @@ struct Arguments {
     #[arg(short, long)]
     dirs: bool,
 
+    /// Output file you want to store the final result if any
+    #[arg(short, long)]
+    output_file: Option<String>,
+
+    /// Used alongside `--output-file` (-o), indicates to append the result instead of overwriting
+    #[arg(short, long)]
+    append: bool,
+
+    /// Used alongside `--output-file` (-o), indicates to write the result enumerated
+    #[arg(long)]
+    enumerate: bool,
+
     /// Only seek symbolic links
     #[arg(short, long)]
     symlinks: bool,
@@ -197,8 +209,23 @@ async fn main() -> Result<()> {
         eprintln!("\nNo matches were found.\n");
         exit(1);
     }
+    let beautified_ui: String = if !args.output_file.is_none() {
+        // if an output file was specified
+        //
+        // `args.enumerate` by default false
+        utils::pretty_interface(&matches, args.enumerate)
+    } else {
+        // no specification of an output file
+        utils::pretty_interface(&matches, true)
+    };
+    // in case of wanting to save to a file instead
+    if let Some(file) = args.output_file {
+        // Reminder: args.append is a boolean flag
+        let _ = utils::write_to(file, beautified_ui, args.append);
+        return Ok(());
+    }
     // Displays the interface
-    println!("\n{}\n", utils::pretty_interface(&matches));
+    println!("\n{}\n", beautified_ui);
     if args.log {
         println!("Searched in: {:?}\n", end - start);
     }

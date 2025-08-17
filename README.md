@@ -12,16 +12,16 @@ You can download the latest Windows binary directly using one of the following c
 #### Using curl (Windows 10+):
 
 ```cmd
-curl -L -o seek.exe https://github.com/Eth3rna1/seek/releases/download/v2.1.4/seek.exe
+curl -L -o seek.exe https://github.com/Eth3rna1/seek/releases/download/v2.2.0/seek.exe
 ```
 
 #### Using PowerShell
 ```cmd
-Invoke-WebRequest -Uri "https://github.com/Eth3rna1/seek/releases/download/v2.1.4/seek.exe" -OutFile "seek.exe"
+Invoke-WebRequest -Uri "https://github.com/Eth3rna1/seek/releases/download/v2.2.0/seek.exe" -OutFile "seek.exe"
 ```
 
 #### Manual Download
-Alternatively, you can download the binary manually from the [Releases page](https://github.com/Eth3rna1/seek/releases/tag/v2.1.4)
+Alternatively, you can download the binary manually from the [Releases page](https://github.com/Eth3rna1/seek/releases/tag/v2.2.0)
 
 ## Getting Started
 The `seek` binary only cares about one parameter, the `query` parameter, which is meant to be a regular expression string.
