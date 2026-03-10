@@ -9,11 +9,22 @@ use tokio::task::JoinHandle;
 use crate::utils;
 
 // Use of the standard library
+use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::io::Result;
 use std::path::PathBuf;
 use std::thread;
 
+fn is_included(included_names: &HashSet<String>, base_name: &str) -> bool {
+    included_names.contains(base_name)
+}
+
+fn is_excluded(excluded_names: &HashSet<String>, base_name: &str) -> bool {
+    excluded_names.contains(base_name)
+}
+
+/// Helper function used in `search`
+///
 /// Takes in a regex with a few arguments to give
 /// the best filtered result possible
 pub fn search_buffer(

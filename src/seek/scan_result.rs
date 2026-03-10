@@ -1,3 +1,7 @@
+//! Definition file.
+//!
+//! Contains the ScanResult
+//! definition and implementation.
 use std::ops::Add;
 use std::path::PathBuf;
 

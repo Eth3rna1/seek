@@ -17,6 +17,7 @@ use seek::scan;
 use seek::search;
 use seek::ScanResult;
 
+use std::collections::HashSet;
 /// Making use of the standard library
 use std::env::consts::OS;
 use std::env::current_dir;
@@ -64,11 +65,11 @@ struct Arguments {
     dirs: bool,
 
     /// Output file you want to store the final result if any
-    #[arg(short, long)]
+    #[arg(long)]
     output_file: Option<String>,
 
     /// Used alongside `--output-file` (-o), indicates to append the result instead of overwriting
-    #[arg(short, long)]
+    #[arg(long)]
     append: bool,
 
     /// Used alongside `--output-file` (-o), indicates to write the result enumerated
@@ -107,6 +108,16 @@ struct Arguments {
     /// Uses the cache instead of scanning directories
     #[arg(short, long)]
     use_cache: bool,
+
+    /// Specifies what parent directory name should be present within
+    /// the found paths. If not present, automatically discards path
+    #[arg(long)]
+    include: Vec<String>,
+
+    /// Specifies what parent directory name should NOT be present
+    /// within the found paths. If present, automatically discards path
+    #[arg(long, short = 'x')]
+    exclude: Vec<String>,
 }
 
 impl Arguments {
@@ -132,6 +143,7 @@ async fn main() -> Result<()> {
     let args = Arguments::parse();
     let path = PathBuf::from(args.get_path());
     let cache = Cache::new(&args.cache_location);
+
     let data: Data = if args.cache || args.use_cache || args.update_cache {
         // If user wants to do anything with the cache
         // obtaining the data from cache
@@ -153,12 +165,15 @@ async fn main() -> Result<()> {
                 if args.log {
                     println!("Scanning directories...");
                 }
+
                 let start = Instant::now();
                 let result: ScanResult = scan(&path, args.depth, args.log).await?;
                 let end = Instant::now();
                 let data: Data = Data::from(result.paths);
+
                 // cache is now updated
                 cache.write(&data)?;
+
                 if args.log {
                     println!("Updated cache.");
                     println!("Cached into `{}`", cache.location().display());
@@ -166,34 +181,46 @@ async fn main() -> Result<()> {
                     println!("Success: {}", utils::format_num(result.success_count));
                     println!("Errors: {}", utils::format_num(result.error_count));
                 }
+
                 if args.cache {
                     exit(0); // user just wanted to cache
                 }
+
             }
+
             cache.read()?
+
         };
+
         data
     } else {
+
         // no need to touch the cache because if was not indicated
         if args.log {
             println!("Scanning directories...");
         }
+
         let start = Instant::now();
         let result: ScanResult = scan(&path, args.depth, args.log).await?;
         let end = Instant::now();
         let data: Data = Data::from(result.paths);
+
         if args.log {
             println!("\nScanned in: {:?}\n", end - start);
             println!("Success: {}", utils::format_num(result.success_count));
             println!("Errors: {}", utils::format_num(result.error_count));
         }
+
         data
     };
+
     // Next Step: Searching data
     if args.log {
         println!("Searching...");
     }
+
     let query: Regex = build_regex(args.query, args.cs, args.exact)?;
+
     let start = Instant::now();
     let matches: Vec<String> = search(
         &data.data,
@@ -205,10 +232,12 @@ async fn main() -> Result<()> {
     )
     .await?;
     let end = Instant::now();
+
     if matches.is_empty() {
         eprintln!("\nNo matches were found.\n");
         exit(1);
     }
+
     let beautified_ui: String = if !args.output_file.is_none() {
         // if an output file was specified
         //
@@ -218,17 +247,21 @@ async fn main() -> Result<()> {
         // no specification of an output file
         utils::pretty_interface(&matches, true)
     };
+
     // in case of wanting to save to a file instead
     if let Some(file) = args.output_file {
         // Reminder: args.append is a boolean flag
         let _ = utils::write_to(file, beautified_ui, args.append);
         return Ok(());
     }
+
     // Displays the interface
     println!("\n{}\n", beautified_ui);
+
     if args.log {
         println!("Searched in: {:?}\n", end - start);
     }
+
     // An interface to select and copy a path
     utils::copy_shell(&matches);
     Ok(())
