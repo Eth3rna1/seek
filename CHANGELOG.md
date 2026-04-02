@@ -2,7 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2.3.0] - 2026-04-01
+### Added
+- Added 3 flags
+    - `--include`
+    - `--exclude` (-x)
+
+    Tells the program what paths to conserve based if
+    whether the user wants to conserve the parent paths
+    specified by such flags.
+
+    - `-o`
+
+    Tells the program to attempt to open/run the file
+    instead of copying it's file path onto the clipboard.
+
+- Added unit testing
+
+
 ## [2.2.0] - 2025-08-17
+### Added
 - Added 3 flags for writing result output into a file
   - `--output-file` (-o)
   - `--append` (-a)

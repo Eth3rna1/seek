@@ -9,12 +9,27 @@ use chrono::prelude::*;
 use clipboard::{ClipboardContext, ClipboardProvider};
 
 // Using the standard library
+use std::env::consts::OS;
 use std::fmt::Display;
 use std::fs::write;
 use std::fs::OpenOptions;
 use std::io::Result;
 use std::io::{self, Write};
-use std::str::from_utf8;
+use std::io::{Error, ErrorKind};
+use std::process::Command;
+
+pub fn open_file(file: &str) -> Result<()> {
+    let mut cmd = match OS {
+        "windows" => Command::new("cmd").arg("/C").arg(file).spawn()?,
+        "linex" => Command::new("xdg-open").arg(file).spawn()?,
+        "macos" => Command::new("open").arg(file).spawn()?,
+        _ => return Err(Error::new(ErrorKind::Unsupported, "OS not supported.")),
+    };
+
+    cmd.wait()?;
+
+    Ok(())
+}
 
 /// An abstract function to write string content into a file
 /// giving the option to append to such file via a parameter
@@ -85,29 +100,93 @@ fn input<T: Display + AsRef<str> + ?Sized>(prompt: &T) -> String {
 }
 
 /// Copies a string onto the clipboard
-fn copy(value: String) {
+pub fn copy(value: String) {
     let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
     ctx.set_contents(value)
         .expect("Could not copy contents into the clipboard");
 }
 
-/// A function that intakes user input to select a specific match
-/// and copy onto the clipboard.
-pub fn copy_shell(matches: &[String]) {
-    println!(
-        "Please select the path via its index to copy onto the clipboard\n\
-Or press `Enter` to exit"
-    );
-    let mut options = Options::new(matches);
+/// Prompts the user to a UI where the user
+/// selects the file path he sought for
+pub fn user_select(matches: &[String]) -> Option<String> {
+    let options = Options::new(matches);
+
     loop {
         let response = input(">> ");
         if response.len() == 0 {
-            return;
+            return None;
         }
+
         if let Some(value) = options.evaluate(&response) {
-            copy(value);
-            println!("Copied path onto the clipboard");
-            return;
+            // returning the Some variant only,
+            // otherwise it was a mistake and the user
+            // probably wants to reselect
+            return Some(value);
         }
+    }
+}
+
+/// A function that intakes user input to select a specific match
+/// and copy onto the clipboard.
+//pub fn copy_shell(matches: &[String]) {
+//    println!(
+//        "Please select the path via its index to copy onto the clipboard\n\
+//Or press `Enter` to exit"
+//    );
+//    let mut options = Options::new(matches);
+//    loop {
+//        let response = input(">> ");
+//        if response.len() == 0 {
+//            return;
+//        }
+//        if let Some(value) = options.evaluate(&response) {
+//            copy(value);
+//            println!("Copied path onto the clipboard");
+//            return;
+//        }
+//    }
+//}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    //use seek::utils::format_num;
+
+    #[test]
+    fn t_format_number_1000() {
+        assert_eq!(format_num(1000), "1,000");
+    }
+
+    #[test]
+    fn t_format_number_no_commas() {
+        assert_eq!(format_num(0), "0");
+    }
+
+    #[test]
+    fn t_distribute_even_data() {
+        let data = vec![1, 2, 3, 4];
+        let buckets = 2;
+
+        let result = distribute::<i32>(&data, buckets);
+        assert_eq!(result, vec![vec![1, 3], vec![2, 4]]);
+    }
+
+    #[test]
+    fn t_distribute_uneven_data() {
+        let data = vec![1, 2, 3];
+        let buckets = 2;
+
+        let result = distribute::<i32>(&data, buckets);
+        assert_eq!(result, vec![vec![1, 3], vec![2]]);
+    }
+
+    #[test]
+    fn t_distribute_no_data() {
+        let data = vec![];
+        let buckets = 2;
+
+        let result: Vec<Vec<i32>> = distribute::<i32>(&data, buckets);
+        let expected: Vec<Vec<i32>> = Vec::new(); // empty vec
+        assert_eq!(result, expected);
     }
 }

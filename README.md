@@ -12,16 +12,16 @@ You can download the latest Windows binary directly using one of the following c
 #### Using curl (Windows 10+):
 
 ```cmd
-curl -L -o seek.exe https://github.com/Eth3rna1/seek/releases/download/v2.2.0/seek.exe
+curl -L -o seek.exe https://github.com/Eth3rna1/seek/releases/download/v2.3.0/seek.exe
 ```
 
 #### Using PowerShell
 ```cmd
-Invoke-WebRequest -Uri "https://github.com/Eth3rna1/seek/releases/download/v2.2.0/seek.exe" -OutFile "seek.exe"
+Invoke-WebRequest -Uri "https://github.com/Eth3rna1/seek/releases/download/v2.3.0/seek.exe" -OutFile "seek.exe"
 ```
 
 #### Manual Download
-Alternatively, you can download the binary manually from the [Releases page](https://github.com/Eth3rna1/seek/releases/tag/v2.2.0)
+Alternatively, you can download the binary manually from the [Releases page](https://github.com/Eth3rna1/seek/releases/tag/v2.3.0)
 
 ## Getting Started
 The `seek` binary only cares about one parameter, the `query` parameter, which is meant to be a regular expression string.
@@ -37,6 +37,7 @@ The binary searches with a case insensitive query by default.
 If you wish to make your query case sensitive, raise the `--cs` flag.
 
 When using the flags `--files` (`-f`), `--dirs` (`-d`), and `--symlinks` (`-s`), which indicate what objects to consider.
+
 By default, the program considers all object types.
 If you wish to consider one or more object types, simply raise the flag you wish the program to consider.
 
@@ -113,6 +114,9 @@ could return
 | --root | -r | Indicates to start searching from root |
 | --log | -l | Prints out the state of the program throughout execution |
 | --depth | | The depth in subdirectories to search |
+|--cs| |Case sensitive regex matching|
+|--include| | Specifies what parent directory name should be present within the found paths. If not present, automatically discards path |
+|--exclude| -x | Specifies what parent directory name should **NOT** be present within the found paths. If present, automatically discards path |
 |--help| -h | Used to display the help message|
 
 ### Cache Flags
@@ -124,3 +128,12 @@ could return
 |--update-cache| | Forces an update on the cache |
 |--ignore-update| -i | Ignores the invalidity of the cache and uses the cache anyway; must be used along with the --use-cache flag |
 |--cache-location| | Used to specify the cache file location along with its JSON file name. [default: ./info.json]|
+
+### Aftermath Flags
+
+| Flag | Alis | Description |
+|------|------|-------------|
+|--ouput-file| | Output file you want to store the final result, if any|
+|--append| | Used alongside `--output-file`, indicates to append the result instead of overwriting|
+|--enumerate| | Used alongside `--output-file`, indicates to write the result enumerated|
+||-o| Instead of copying the selected path, the file is ran in an attempt to open it|

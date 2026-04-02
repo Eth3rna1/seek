@@ -13,6 +13,8 @@ use cache::Data;
 use clap::Parser;
 use regex::Regex;
 use regex_builder::build_regex;
+use seek::filter_excluded_dirs;
+use seek::filter_included_dirs;
 use seek::scan;
 use seek::search;
 use seek::ScanResult;
@@ -68,11 +70,11 @@ struct Arguments {
     #[arg(long)]
     output_file: Option<String>,
 
-    /// Used alongside `--output-file` (-o), indicates to append the result instead of overwriting
+    /// Used alongside `--output-file`, indicates to append the result instead of overwriting
     #[arg(long)]
     append: bool,
 
-    /// Used alongside `--output-file` (-o), indicates to write the result enumerated
+    /// Used alongside `--output-file`, indicates to write the result enumerated
     #[arg(long)]
     enumerate: bool,
 
@@ -118,6 +120,11 @@ struct Arguments {
     /// within the found paths. If present, automatically discards path
     #[arg(long, short = 'x')]
     exclude: Vec<String>,
+
+    /// Instead of copying the selected path, the
+    /// file is ran in an attempt to open it
+    #[arg(short)]
+    open: bool,
 }
 
 impl Arguments {
@@ -185,16 +192,13 @@ async fn main() -> Result<()> {
                 if args.cache {
                     exit(0); // user just wanted to cache
                 }
-
             }
 
             cache.read()?
-
         };
 
         data
     } else {
-
         // no need to touch the cache because if was not indicated
         if args.log {
             println!("Scanning directories...");
@@ -222,21 +226,21 @@ async fn main() -> Result<()> {
     let query: Regex = build_regex(args.query, args.cs, args.exact)?;
 
     let start = Instant::now();
-    let matches: Vec<String> = search(
-        &data.data,
-        query,
-        args.log,
-        args.dirs,
-        args.files,
-        args.symlinks,
-    )
-    .await?;
+    let mut matches: Vec<PathBuf> =
+        search(&data.data, query, args.dirs, args.files, args.symlinks).await?;
     let end = Instant::now();
+
+    // filtering based on argument specifications
+    matches = filter_included_dirs(matches, &args.include);
+    matches = filter_excluded_dirs(matches, &args.exclude);
 
     if matches.is_empty() {
         eprintln!("\nNo matches were found.\n");
         exit(1);
     }
+
+    // mapping to a different type for terminal output
+    let matches: Vec<String> = matches.iter().map(|p| p.display().to_string()).collect();
 
     let beautified_ui: String = if !args.output_file.is_none() {
         // if an output file was specified
@@ -262,7 +266,39 @@ async fn main() -> Result<()> {
         println!("Searched in: {:?}\n", end - start);
     }
 
+    let selected_path: Option<String> = {
+        // prompting a different message based on the argument given
+        match args.open {
+            true => println!(
+                "Please select the path via its index to open\n\
+Or press `Enter` to exit"
+            ),
+
+            false => println!(
+                "Please select the path via its index to copy onto the clipboard\n\
+Or press `Enter` to exit"
+            ),
+        }
+
+        utils::user_select(&matches)
+    };
+
+    // selected path
+    let path: String = match selected_path {
+        Some(p) => p,
+        None => return Ok(()), // user didn't select anything
+    };
+
+    if args.open {
+        // user wants to open the file
+
+        utils::open_file(&path)?;
+        return Ok(());
+    }
+
     // An interface to select and copy a path
-    utils::copy_shell(&matches);
+    utils::copy(path);
+    println!("Copied path onto the clipboard");
+
     Ok(())
 }

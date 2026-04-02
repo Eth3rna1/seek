@@ -130,7 +130,7 @@ pub async fn scan(path: &Path, depth: usize, log: bool) -> Result<ScanResult> {
 
     let cores_amount: usize = thread::available_parallelism()?.into();
     // evenly distributing the workload per each core
-    let mut workload_per_core: Vec<Vec<PathBuf>> =
+    let workload_per_core: Vec<Vec<PathBuf>> =
         utils::distribute::<PathBuf>(&initial_dirs, cores_amount);
     let mut workers: Vec<JoinHandle<ScanResult>> = Vec::new();
 
