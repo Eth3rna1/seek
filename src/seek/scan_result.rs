@@ -1,3 +1,7 @@
+// Definition of `ScanResult`
+//
+// Used to keep track of file paths,
+// error counter, and success counter
 use std::ops::Add;
 use std::path::PathBuf;
 

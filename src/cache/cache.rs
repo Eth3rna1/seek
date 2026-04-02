@@ -1,3 +1,5 @@
+//! Contains the caching definition
+//! and implementation of the program.
 use crate::cache::Data;
 use crate::utils;
 

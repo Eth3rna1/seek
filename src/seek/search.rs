@@ -1,4 +1,4 @@
-//! Contains the search function
+//! Contains the `search()` implementation
 
 // importing from external crates
 use regex::Regex;
@@ -25,6 +25,7 @@ pub fn search_buffer(
     symlinks: bool,
 ) -> Vec<String> {
     let mut matches: Vec<String> = Vec::new();
+
     if files == dirs && dirs == symlinks {
         // if all object types are the same, (true or false), that means
         // no object type was specified or all types were specified, thus,
@@ -61,6 +62,7 @@ pub fn search_buffer(
             }
         }
     }
+
     matches
 }
 
@@ -76,16 +78,20 @@ pub async fn search(
     let cores_amount: usize = thread::available_parallelism()?.into();
     let buffers: Vec<Vec<PathBuf>> = utils::distribute(paths, cores_amount);
     let mut workers: Vec<JoinHandle<Vec<String>>> = Vec::new();
+
     for buffer in buffers {
         let regex = reg.clone();
         let worker: JoinHandle<Vec<String>> =
             spawn(async move { search_buffer(&buffer, regex, log, dirs, files, symlinks) });
         workers.push(worker);
     }
+
     let mut found_result: Vec<String> = Vec::new();
+
     for worker in workers {
         let result = worker.await?;
         found_result.extend(result);
     }
+
     Ok(found_result)
 }

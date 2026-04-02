@@ -1,9 +1,19 @@
-//! Contains the seek functionality
+//! Contains the `scan()` definition and implementation
 //!
-//! Two functions, `scan()` and `seek()`
+//! Main Entry Point: `scan()`
 //!
-//! `scan()` is an asynchronous function meanwhile `seek()` isn't
-// Other functions or structures located somewhere else within the crate
+//! `scan()` is an asynchronous function
+//!
+//! The function replicates threads for
+//! every subdirectory from the starting
+//! working directory, where each thread
+//! is responsible for it's own scanning.
+//!
+//! This behavior limits the amount of threads
+//! created while trying to create enough for
+//! the greatest performance.
+
+// local functionality
 use crate::seek::ScanResult;
 use crate::utils;
 
@@ -11,7 +21,7 @@ use crate::utils;
 use tokio::task::JoinHandle;
 use walkdir::WalkDir;
 
-// Making use of the standard library
+// standard library
 use std::fs;
 use std::io::Result;
 use std::io::{Error, ErrorKind};
@@ -22,22 +32,28 @@ use std::thread;
 /// Iterates through the directories given recursively
 fn walk_all(dirs: &[PathBuf], depth: usize, log: bool) -> ScanResult {
     let mut result = ScanResult::new();
+
     if depth == 0 {
         return result;
     }
+
     for dir in dirs.iter() {
         let mut buffer = ScanResult::new();
         let mut d = 1;
+
         for entry in WalkDir::new(dir) {
             if d == depth {
                 break;
             }
+
             d += 1;
+
             match entry {
                 Ok(entry) => {
                     let entry = entry.path().to_path_buf();
                     buffer.push(entry);
                 }
+
                 Err(error) => {
                     buffer.increase_error(1);
                     if log {
@@ -46,6 +62,7 @@ fn walk_all(dirs: &[PathBuf], depth: usize, log: bool) -> ScanResult {
                 }
             }
         }
+
         // increasing the success counter at the end to decrease overhead
         buffer.increase_success(buffer.size());
         // merging the buffer into the main result structure
@@ -57,6 +74,7 @@ fn walk_all(dirs: &[PathBuf], depth: usize, log: bool) -> ScanResult {
 /// Scans all directories asynchronously keeping track of an error counter along the way
 pub async fn scan(path: &Path, depth: usize, log: bool) -> Result<ScanResult> {
     if !path.exists() {
+        // if path does not exist, error
         return Err(Error::new(
             ErrorKind::NotFound,
             format!(
@@ -65,7 +83,9 @@ pub async fn scan(path: &Path, depth: usize, log: bool) -> Result<ScanResult> {
             ),
         ));
     }
+
     if !path.is_dir() {
+        // if path is not a directory, error
         return Err(Error::new(
             ErrorKind::Other,
             format!("`{}` is not a directory", path.display()),
@@ -81,6 +101,7 @@ pub async fn scan(path: &Path, depth: usize, log: bool) -> Result<ScanResult> {
 
     let initial_dirs: Vec<PathBuf> = {
         let mut bind = Vec::new();
+
         for entry in fs::read_dir(path)? {
             match entry {
                 Ok(entry) => {
@@ -94,6 +115,7 @@ pub async fn scan(path: &Path, depth: usize, log: bool) -> Result<ScanResult> {
                         result.push(entry.to_owned());
                     }
                 }
+
                 Err(error) => {
                     result.increase_error(1);
                     if log {
@@ -102,6 +124,7 @@ pub async fn scan(path: &Path, depth: usize, log: bool) -> Result<ScanResult> {
                 }
             }
         }
+
         bind
     };
 
@@ -110,6 +133,7 @@ pub async fn scan(path: &Path, depth: usize, log: bool) -> Result<ScanResult> {
     let mut workload_per_core: Vec<Vec<PathBuf>> =
         utils::distribute::<PathBuf>(&initial_dirs, cores_amount);
     let mut workers: Vec<JoinHandle<ScanResult>> = Vec::new();
+
     {
         // initializing asynchronous threads
         for workload in workload_per_core.iter() {
@@ -119,12 +143,14 @@ pub async fn scan(path: &Path, depth: usize, log: bool) -> Result<ScanResult> {
             workers.push(worker);
         }
     }
+
     {
-        // awaiting all threads
+        // awaiting all worker threads
         for worker in workers {
             let worker_result: ScanResult = worker.await?;
             result.append(worker_result);
         }
     }
+
     Ok(result)
 }

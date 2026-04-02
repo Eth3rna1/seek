@@ -16,7 +16,6 @@ use std::io::Result;
 use std::io::{self, Write};
 use std::str::from_utf8;
 
-
 /// An abstract function to write string content into a file
 /// giving the option to append to such file via a parameter
 pub fn write_to(loc: String, content: String, append: bool) -> Result<()> {

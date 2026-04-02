@@ -1,3 +1,6 @@
+//! Definition and implementation of `Data`
+//!
+//! A wrapper to serialize the cached data.
 use crate::utils;
 
 use serde::{Deserialize, Serialize};

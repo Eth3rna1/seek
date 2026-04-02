@@ -1,4 +1,3 @@
-//!
 //! Modifies and builds the regex
 
 // Importing from external libraries
