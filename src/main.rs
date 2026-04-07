@@ -18,6 +18,11 @@ use seek::filter_included_dirs;
 use seek::scan;
 use seek::search;
 use seek::ScanResult;
+use log::{
+    warn,
+    error,
+    info
+};
 
 use std::collections::HashSet;
 /// Making use of the standard library
@@ -151,6 +156,11 @@ async fn main() -> Result<()> {
     let path = PathBuf::from(args.get_path());
     let cache = Cache::new(&args.cache_location);
 
+    // initializing the pretty logger with Info level tracing
+    pretty_env_logger::formatted_builder()
+        .filter_level(log::LevelFilter::Info)
+        .init();
+
     let data: Data = if args.cache || args.use_cache || args.update_cache {
         // If user wants to do anything with the cache
         // obtaining the data from cache
@@ -170,7 +180,8 @@ async fn main() -> Result<()> {
             if !args.ignore_update {
                 // If the user didn't specify to ignore the validity of the cache
                 if args.log {
-                    println!("Scanning directories...");
+                    warn!("Cache is invalid.");
+                    info!("Scanning directories...");
                 }
 
                 let start = Instant::now();
@@ -182,11 +193,11 @@ async fn main() -> Result<()> {
                 cache.write(&data)?;
 
                 if args.log {
-                    println!("Updated cache.");
-                    println!("Cached into `{}`", cache.location().display());
-                    println!("Scanned in: {:?}", end - start);
-                    println!("Success: {}", utils::format_num(result.success_count));
-                    println!("Errors: {}", utils::format_num(result.error_count));
+                    info!("Updated cache.");
+                    info!("Cached into `{}`", cache.location().display());
+                    info!("Scanned in: {:?}", end - start);
+                    info!("Success: {}", utils::format_num(result.success_count));
+                    info!("Errors: {}", utils::format_num(result.error_count));
                 }
 
                 if args.cache {
@@ -201,7 +212,7 @@ async fn main() -> Result<()> {
     } else {
         // no need to touch the cache because if was not indicated
         if args.log {
-            println!("Scanning directories...");
+            info!("Scanning directories...");
         }
 
         let start = Instant::now();
@@ -210,9 +221,9 @@ async fn main() -> Result<()> {
         let data: Data = Data::from(result.paths);
 
         if args.log {
-            println!("\nScanned in: {:?}\n", end - start);
-            println!("Success: {}", utils::format_num(result.success_count));
-            println!("Errors: {}", utils::format_num(result.error_count));
+            info!("\nScanned in: {:?}\n", end - start);
+            info!("Success: {}", utils::format_num(result.success_count));
+            info!("Errors: {}", utils::format_num(result.error_count));
         }
 
         data
@@ -220,7 +231,7 @@ async fn main() -> Result<()> {
 
     // Next Step: Searching data
     if args.log {
-        println!("Searching...");
+        info!("Searching...");
     }
 
     let query: Regex = build_regex(args.query, args.cs, args.exact)?;
@@ -235,7 +246,8 @@ async fn main() -> Result<()> {
     matches = filter_excluded_dirs(matches, &args.exclude);
 
     if matches.is_empty() {
-        eprintln!("\nNo matches were found.\n");
+        print!("\n"); // just adding a new line for better visual
+        error!("No matches were found.");
         exit(1);
     }
 
@@ -263,7 +275,7 @@ async fn main() -> Result<()> {
     println!("\n{}\n", beautified_ui);
 
     if args.log {
-        println!("Searched in: {:?}\n", end - start);
+        info!("Searched in: {:?}\n", end - start);
     }
 
     let selected_path: Option<String> = {
