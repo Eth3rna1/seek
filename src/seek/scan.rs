@@ -40,15 +40,8 @@ fn walk_all(dirs: &[PathBuf], depth: usize, log: bool) -> ScanResult {
 
     for dir in dirs.iter() {
         let mut buffer = ScanResult::new();
-        let mut d = 1;
 
-        for entry in WalkDir::new(dir) {
-            if d == depth {
-                break;
-            }
-
-            d += 1;
-
+        for entry in WalkDir::new(dir).max_depth(depth) {
             match entry {
                 Ok(entry) => {
                     let entry = entry.path().to_path_buf();
@@ -73,6 +66,7 @@ fn walk_all(dirs: &[PathBuf], depth: usize, log: bool) -> ScanResult {
         // merging the buffer into the main result structure
         result.append(buffer);
     }
+
     result
 }
 
