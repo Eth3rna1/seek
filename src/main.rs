@@ -195,7 +195,8 @@ async fn main() -> Result<()> {
                 if args.log {
                     info!("Updated cache.");
                     info!("Cached into `{}`", cache.location().display());
-                    info!("Scanned in: {:?}", end - start);
+                    print!("\n"); // new line for better visuals
+                    info!("Scanned in: {:?}\n", end - start);
                     info!("Success: {}", utils::format_num(result.success_count));
                     info!("Errors: {}", utils::format_num(result.error_count));
                 }
@@ -221,7 +222,8 @@ async fn main() -> Result<()> {
         let data: Data = Data::from(result.paths);
 
         if args.log {
-            info!("\nScanned in: {:?}\n", end - start);
+            print!("\n"); // a new line for better visuals
+            info!("Scanned in: {:?}\n", end - start);
             info!("Success: {}", utils::format_num(result.success_count));
             info!("Errors: {}", utils::format_num(result.error_count));
         }
@@ -231,7 +233,7 @@ async fn main() -> Result<()> {
 
     // Next Step: Searching data
     if args.log {
-        info!("Searching...");
+        info!("Matching query...");
     }
 
     let query: Regex = build_regex(args.query, args.cs, args.exact)?;

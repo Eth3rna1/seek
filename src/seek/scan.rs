@@ -20,6 +20,7 @@ use crate::utils;
 // Importing specific functions and structures from external crates
 use tokio::task::JoinHandle;
 use walkdir::WalkDir;
+use log::warn;
 
 // standard library
 use std::fs;
@@ -57,7 +58,11 @@ fn walk_all(dirs: &[PathBuf], depth: usize, log: bool) -> ScanResult {
                 Err(error) => {
                     buffer.increase_error(1);
                     if log {
-                        eprintln!("{}", error.to_string());
+                        // Not an error level log
+                        // since its not meant to
+                        // terminate or interrupt
+                        // the program
+                        warn!("{}", error.to_string());
                     }
                 }
             }
@@ -87,7 +92,7 @@ pub async fn scan(path: &Path, depth: usize, log: bool) -> Result<ScanResult> {
     if !path.is_dir() {
         // if path is not a directory, error
         return Err(Error::new(
-            ErrorKind::Other,
+            ErrorKind::NotADirectory,
             format!("`{}` is not a directory", path.display()),
         ));
     }
@@ -119,7 +124,10 @@ pub async fn scan(path: &Path, depth: usize, log: bool) -> Result<ScanResult> {
                 Err(error) => {
                     result.increase_error(1);
                     if log {
-                        eprintln!("{}", error.to_string());
+                        // not an error level log
+                        // since it's not meant to terminate
+                        // or interrupt the program
+                        warn!("{}", error.to_string());
                     }
                 }
             }
