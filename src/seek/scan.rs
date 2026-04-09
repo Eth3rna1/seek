@@ -86,7 +86,7 @@ pub async fn scan(path: &Path, depth: usize, log: bool) -> Result<ScanResult> {
     if !path.is_dir() {
         // if path is not a directory, error
         return Err(Error::new(
-            ErrorKind::NotADirectory,
+            ErrorKind::InvalidInput,
             format!("`{}` is not a directory", path.display()),
         ));
     }
