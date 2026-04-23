@@ -130,6 +130,11 @@ struct Arguments {
     /// file is ran in an attempt to open it
     #[arg(short)]
     open: bool,
+
+    /// Interpolates the found path into the command, and runs the command.
+    /// Use `{}` as a placeholder for the path
+    #[arg(long)]
+    cmd: Option<String>
 }
 
 impl Arguments {
@@ -302,6 +307,12 @@ Or press `Enter` to exit"
         Some(p) => p,
         None => return Ok(()), // user didn't select anything
     };
+
+    if let Some(mut cmd) = args.cmd {
+        cmd = utils::interpolate_to_command(cmd, &path);
+        utils::run_cmd(cmd)?;
+        return Ok(());
+    }
 
     if args.open {
         // user wants to open the file

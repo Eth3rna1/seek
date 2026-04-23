@@ -19,15 +19,26 @@ use std::io::{Error, ErrorKind};
 use std::process::Command;
 
 pub fn open_file(file: &str) -> Result<()> {
-    let mut cmd = match OS {
-        "windows" => Command::new("cmd").arg("/C").arg(file).spawn()?,
-        "linex" => Command::new("xdg-open").arg(file).spawn()?,
-        "macos" => Command::new("open").arg(file).spawn()?,
-        _ => return Err(Error::new(ErrorKind::Unsupported, "OS not supported.")),
-    };
+    #[cfg(target_os = "windows")]
+    let mut cmd = Command::new("cmd")
+        .arg("/C")
+        .arg(file)
+        .spawn()?;
+
+    #[cfg(target_os = "linux")]
+    let mut cmd = Command::new("xdg-open")
+        .arg(file)
+        .spawn()?;
+
+    #[cfg(target_os = "macos")]
+    let mut cmd = Command::new("open")
+        .arg(file)
+        .spawn()?;
+
+    #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
+    return Err(Error::new(ErrorKind::Unsupported, "OS not supported."));
 
     cmd.wait()?;
-
     Ok(())
 }
 
@@ -126,31 +137,46 @@ pub fn user_select(matches: &[String]) -> Option<String> {
     }
 }
 
-/// A function that intakes user input to select a specific match
-/// and copy onto the clipboard.
-//pub fn copy_shell(matches: &[String]) {
-//    println!(
-//        "Please select the path via its index to copy onto the clipboard\n\
-//Or press `Enter` to exit"
-//    );
-//    let mut options = Options::new(matches);
-//    loop {
-//        let response = input(">> ");
-//        if response.len() == 0 {
-//            return;
-//        }
-//        if let Some(value) = options.evaluate(&response) {
-//            copy(value);
-//            println!("Copied path onto the clipboard");
-//            return;
-//        }
-//    }
-//}
+pub fn interpolate_to_command(cmd: String, path: &str) -> String {
+    return cmd.replace("{}", path);
+}
+
+#[cfg(target_os = "windows")]
+pub fn run_cmd(cmd_query: String) -> Result<()> {
+    let mut cmd = Command::new("cmd")
+        .arg("/C")
+        .arg(cmd_query)
+        .spawn()?;
+
+    cmd.wait()?;
+
+    return Ok(())
+}
+
+#[cfg(not(target_os = "windows"))]
+pub fn run_cmd(cmd_query: String) -> Result<()> {
+    let mut cmd = Command::new("sh")
+        .arg("-c")
+        .arg(cmd_query)
+        .spawn()?;
+
+    cmd.wait()?;
+
+    return Ok(())
+}
 
 #[cfg(test)]
 mod tests {
     use super::*;
     //use seek::utils::format_num;
+
+    #[test]
+    fn t_interpolation() {
+        let cmd = "type {} | clip".to_string();
+        let path = "./hello.go";
+        let expected_result = "type ./hello.go | clip".to_string();
+        assert_eq!(interpolate_to_command(cmd, path), expected_result);
+    }
 
     #[test]
     fn t_format_number_1000() {
