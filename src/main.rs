@@ -23,6 +23,7 @@ use log::{
     error,
     info
 };
+use pretty_env_logger::env_logger::fmt::Formatter;
 
 use std::collections::HashSet;
 /// Making use of the standard library
@@ -34,6 +35,7 @@ use std::path::MAIN_SEPARATOR;
 use std::process::exit;
 use std::thread;
 use std::time::Instant;
+use std::io::Write;
 
 /// Seek, any object via the terminal with caching functionality.
 ///
@@ -164,6 +166,16 @@ async fn main() -> Result<()> {
     // initializing the pretty logger with Info level tracing
     pretty_env_logger::formatted_builder()
         .filter_level(log::LevelFilter::Info)
+        .format(|buf: &mut Formatter, record: &log::Record| {
+            let level = buf.default_level_style(record.level());
+
+            writeln!(
+                buf,
+                " {} > {}",
+                level.value(record.level()),
+                record.args()
+            )
+        })
         .init();
 
     let data: Data = if args.cache || args.use_cache || args.update_cache {
