@@ -12,16 +12,16 @@ You can download the latest Windows binary directly using one of the following c
 #### Using curl (Windows 10+):
 
 ```cmd
-curl -L -o seek.exe https://github.com/Eth3rna1/seek/releases/download/v2.5.0/seek.exe
+curl -L -o seek.exe https://github.com/Eth3rna1/seek/releases/download/v2.6.1/seek.exe
 ```
 
 #### Using PowerShell
 ```cmd
-Invoke-WebRequest -Uri "https://github.com/Eth3rna1/seek/releases/download/v2.5.0/seek.exe" -OutFile "seek.exe"
+Invoke-WebRequest -Uri "https://github.com/Eth3rna1/seek/releases/download/v2.6.1/seek.exe" -OutFile "seek.exe"
 ```
 
 #### Manual Download
-Alternatively, you can download the binary manually from the [Releases page](https://github.com/Eth3rna1/seek/releases/tag/v2.5.0)
+Alternatively, you can download the binary manually from the [Releases page](https://github.com/Eth3rna1/seek/releases/tag/v2.6.1)
 
 ## Getting Started
 The `seek` binary only cares about one parameter, the `query` parameter, which is meant to be a regular expression string.
@@ -136,4 +136,5 @@ could return
 |--ouput-file| | Output file you want to store the final result, if any|
 |--append| | Used alongside `--output-file`, indicates to append the result instead of overwriting|
 |--enumerate| | Used alongside `--output-file`, indicates to write the result enumerated|
-||-o| Instead of copying the selected path, the file is ran in an attempt to open it|
+| |-o| Instead of copying the selected path, the file is ran in an attempt to open it|
+|--cmd| | The selected path is interpolated into the provided command template by replacing `{}`, then the resulting command is executed |
