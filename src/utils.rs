@@ -20,20 +20,13 @@ use std::process::Command;
 
 pub fn open_file(file: &str) -> Result<()> {
     #[cfg(target_os = "windows")]
-    let mut cmd = Command::new("cmd")
-        .arg("/C")
-        .arg(file)
-        .spawn()?;
+    let mut cmd = Command::new("cmd").arg("/C").arg(file).spawn()?;
 
     #[cfg(target_os = "linux")]
-    let mut cmd = Command::new("xdg-open")
-        .arg(file)
-        .spawn()?;
+    let mut cmd = Command::new("xdg-open").arg(file).spawn()?;
 
     #[cfg(target_os = "macos")]
-    let mut cmd = Command::new("open")
-        .arg(file)
-        .spawn()?;
+    let mut cmd = Command::new("open").arg(file).spawn()?;
 
     #[cfg(not(any(target_os = "windows", target_os = "linux", target_os = "macos")))]
     return Err(Error::new(ErrorKind::Unsupported, "OS not supported."));
@@ -143,26 +136,20 @@ pub fn interpolate_to_command(cmd: String, path: &str) -> String {
 
 #[cfg(target_os = "windows")]
 pub fn run_cmd(cmd_query: String) -> Result<()> {
-    let mut cmd = Command::new("cmd")
-        .arg("/C")
-        .arg(cmd_query)
-        .spawn()?;
+    let mut cmd = Command::new("cmd").arg("/C").arg(cmd_query).spawn()?;
 
     cmd.wait()?;
 
-    return Ok(())
+    return Ok(());
 }
 
 #[cfg(not(target_os = "windows"))]
 pub fn run_cmd(cmd_query: String) -> Result<()> {
-    let mut cmd = Command::new("sh")
-        .arg("-c")
-        .arg(cmd_query)
-        .spawn()?;
+    let mut cmd = Command::new("sh").arg("-c").arg(cmd_query).spawn()?;
 
     cmd.wait()?;
 
-    return Ok(())
+    return Ok(());
 }
 
 #[cfg(test)]

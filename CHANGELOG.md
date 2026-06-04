@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [3.0.0] - 2026-06-04
+### Added
+- Exclusions now happen during traversal, not during search anymore.
+
+### Changed
+- `scan` function takes an additional argument, `exclusions`.
+
 ## [2.3.0] - 2026-04-01
 ### Added
 - Added 3 flags

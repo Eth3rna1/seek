@@ -18,30 +18,50 @@ use crate::seek::ScanResult;
 use crate::utils;
 
 // Importing specific functions and structures from external crates
+use log::warn;
 use tokio::task::JoinHandle;
 use walkdir::WalkDir;
-use log::warn;
 
 // standard library
+use std::collections::HashSet;
 use std::fs;
 use std::io::Result;
 use std::io::{Error, ErrorKind};
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::thread;
 
 /// Iterates through the directories given recursively
-fn walk_all(dirs: &[PathBuf], depth: usize, log: bool) -> ScanResult {
+fn walk_all(
+    dirs: &[PathBuf],
+    depth: usize,
+    log: bool,
+    exclusions_ptr: Arc<HashSet<String>>,
+) -> ScanResult {
     let mut result = ScanResult::new();
 
     if depth == 0 {
         return result;
     }
 
+    let exclusions = exclusions_ptr.as_ref();
+    let exclusions_len = exclusions.len();
+
     for dir in dirs.iter() {
         let mut buffer = ScanResult::new();
 
-        for entry in WalkDir::new(dir).max_depth(depth) {
+        for entry in WalkDir::new(dir)
+            .max_depth(depth)
+            .into_iter()
+            .filter_entry(|e| {
+                if e.file_type().is_file() {
+                    return true;
+                }
+                let basename = e.file_name().to_string_lossy();
+                !exclusions.contains(basename.as_ref())
+            })
+        {
             match entry {
                 Ok(entry) => {
                     let entry = entry.path().to_path_buf();
@@ -71,7 +91,12 @@ fn walk_all(dirs: &[PathBuf], depth: usize, log: bool) -> ScanResult {
 }
 
 /// Scans all directories asynchronously keeping track of an error counter along the way
-pub async fn scan(path: &Path, depth: usize, log: bool) -> Result<ScanResult> {
+pub async fn scan(
+    path: &Path,
+    depth: usize,
+    log: bool,
+    exclusions: HashSet<String>,
+) -> Result<ScanResult> {
     if !path.exists() {
         // if path does not exist, error
         return Err(Error::new(
@@ -90,6 +115,8 @@ pub async fn scan(path: &Path, depth: usize, log: bool) -> Result<ScanResult> {
             format!("`{}` is not a directory", path.display()),
         ));
     }
+
+    let exclusions_ptr = Arc::new(exclusions);
 
     //let mut collector = Vec::new();
     //let mut success: usize = 0;
@@ -140,8 +167,9 @@ pub async fn scan(path: &Path, depth: usize, log: bool) -> Result<ScanResult> {
         // initializing asynchronous threads
         for workload in workload_per_core.iter() {
             let w = workload.clone();
+            let ptr = Arc::clone(&exclusions_ptr);
             let worker: JoinHandle<ScanResult> =
-                tokio::spawn(async move { walk_all(&w, depth, log) });
+                tokio::spawn(async move { walk_all(&w, depth, log, ptr) });
             workers.push(worker);
         }
     }

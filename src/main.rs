@@ -13,29 +13,25 @@ use cache::Data;
 use clap::Parser;
 use regex::Regex;
 use regex_builder::build_regex;
-use seek::filter_excluded_dirs;
-use seek::filter_included_dirs;
+//use seek::filter_excluded_dirs;
+//use seek::filter_included_dirs;
+use log::{error, info, warn};
+use pretty_env_logger::env_logger::fmt::Formatter;
 use seek::scan;
 use seek::search;
 use seek::ScanResult;
-use log::{
-    warn,
-    error,
-    info
-};
-use pretty_env_logger::env_logger::fmt::Formatter;
 
 use std::collections::HashSet;
 /// Making use of the standard library
 use std::env::consts::OS;
 use std::env::current_dir;
 use std::io::Result;
+use std::io::Write;
 use std::path::PathBuf;
 use std::path::MAIN_SEPARATOR;
 use std::process::exit;
 use std::thread;
 use std::time::Instant;
-use std::io::Write;
 
 /// Seek, any object via the terminal with caching functionality.
 ///
@@ -136,7 +132,7 @@ struct Arguments {
     /// Interpolates the found path into the command, and runs the command.
     /// Use `{}` as a placeholder for the path
     #[arg(long)]
-    cmd: Option<String>
+    cmd: Option<String>,
 }
 
 impl Arguments {
@@ -159,9 +155,10 @@ impl Arguments {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let args = Arguments::parse();
+    let mut args = Arguments::parse();
     let path = PathBuf::from(args.get_path());
     let cache = Cache::new(&args.cache_location);
+    let exclusion_set = args.exclude.clone().into_iter().collect();
 
     // initializing the pretty logger with Info level tracing
     pretty_env_logger::formatted_builder()
@@ -169,12 +166,7 @@ async fn main() -> Result<()> {
         .format(|buf: &mut Formatter, record: &log::Record| {
             let level = buf.default_level_style(record.level());
 
-            writeln!(
-                buf,
-                " {} > {}",
-                level.value(record.level()),
-                record.args()
-            )
+            writeln!(buf, " {} > {}", level.value(record.level()), record.args())
         })
         .init();
 
@@ -202,7 +194,7 @@ async fn main() -> Result<()> {
                 }
 
                 let start = Instant::now();
-                let result: ScanResult = scan(&path, args.depth, args.log).await?;
+                let result: ScanResult = scan(&path, args.depth, args.log, exclusion_set).await?;
                 let end = Instant::now();
                 let data: Data = Data::from(result.paths);
 
@@ -234,7 +226,7 @@ async fn main() -> Result<()> {
         }
 
         let start = Instant::now();
-        let result: ScanResult = scan(&path, args.depth, args.log).await?;
+        let result: ScanResult = scan(&path, args.depth, args.log, exclusion_set).await?;
         let end = Instant::now();
         let data: Data = Data::from(result.paths);
 
@@ -261,8 +253,8 @@ async fn main() -> Result<()> {
     let end = Instant::now();
 
     // filtering based on argument specifications
-    matches = filter_included_dirs(matches, &args.include);
-    matches = filter_excluded_dirs(matches, &args.exclude);
+    //matches = filter_included_dirs(matches, &args.include);
+    //matches = filter_excluded_dirs(matches, &args.exclude);
 
     if matches.is_empty() {
         print!("\n"); // just adding a new line for better visual
