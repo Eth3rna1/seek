@@ -13,16 +13,15 @@ use cache::Data;
 use clap::Parser;
 use regex::Regex;
 use regex_builder::build_regex;
-//use seek::filter_excluded_dirs;
-//use seek::filter_included_dirs;
 use log::{error, info, warn};
 use pretty_env_logger::env_logger::fmt::Formatter;
 use seek::scan;
 use seek::search;
 use seek::ScanResult;
 
-use std::collections::HashSet;
 /// Making use of the standard library
+use std::collections::HashSet;
+use std::path::Path;
 use std::env::consts::OS;
 use std::env::current_dir;
 use std::io::Result;
@@ -32,6 +31,7 @@ use std::path::MAIN_SEPARATOR;
 use std::process::exit;
 use std::thread;
 use std::time::Instant;
+use std::time::Duration;
 
 /// Seek, any object via the terminal with caching functionality.
 ///
@@ -151,6 +151,162 @@ impl Arguments {
             .unwrap_or(".")
             .to_string()
     }
+
+    fn search_path_to_pathbuf(&self) -> PathBuf {
+        let str_path = self.get_path();
+        PathBuf::from(str_path)
+    }
+}
+
+async fn get_file_path_data_from_cache(path: &Path, args: &Arguments, cache: &Cache, exclusion_set: HashSet<String>) -> Result<Data> {
+    cache.summon()?;
+
+    let cache_is_valid_and_no_update = cache.is_valid() && !args.update_cache;
+
+    let data: Result<Data> = if cache_is_valid_and_no_update {
+        // if cache is valid and user didn't specify to update the cache
+        if args.cache {
+            // raising the --cache (-c) flag is meant to be
+            // used to cache any filepaths that are being held
+            // by the program
+            exit(0); // user just wanted to cache
+        }
+        cache.read()
+    } else {
+        // There is an implication that the cache is invalid
+        let update_cache = !args.ignore_update;
+
+        if update_cache {
+            // If the user didn't specify to ignore the validity of the cache
+            if args.log {
+                warn!("Cache is invalid.");
+                info!("Scanning directories...");
+            }
+
+            let start = Instant::now();
+            let result: ScanResult = scan(&path, args.depth, args.log, exclusion_set).await?;
+            let end = Instant::now();
+            let data: Data = Data::from(result.paths);
+
+            // cache is now updated
+            cache.write(&data)?;
+
+            if args.log {
+                info!("Updated cache.");
+                info!("Cached into `{}`", cache.location().display());
+                print!("\n"); // new line for better visuals
+                info!("Scanned in: {:?}\n", end - start);
+                info!("Success: {}", utils::format_num(result.success_count));
+                info!("Errors: {}", utils::format_num(result.error_count));
+            }
+
+            if args.cache {
+                exit(0); // user just wanted to cache
+            }
+        }
+
+        cache.read()
+    };
+
+    return data;
+}
+
+// Phase 1: Scanning directories or reading from the cache
+async fn get_file_path_data(args: &Arguments, cache: &Cache, exclusion_set: HashSet<String>) -> Result<Data> {
+
+    let path = args.search_path_to_pathbuf();
+
+    if args.cache || args.use_cache || args.update_cache {
+        // If user wants to do anything with the cache, obtain data from cache
+        return get_file_path_data_from_cache(&path, args, cache, exclusion_set).await;
+    }
+
+    if args.log {
+        info!("Scanning directories...");
+    }
+
+    let start = Instant::now();
+    let result: ScanResult = scan(&path, args.depth, args.log, exclusion_set).await?;
+    let end = Instant::now();
+    let data: Data = Data::from(result.paths);
+
+    if args.log {
+        print!("\n"); // a new line for better visuals
+        info!("Scanned in: {:?}\n", end - start);
+        info!("Success: {}", utils::format_num(result.success_count));
+        info!("Errors: {}", utils::format_num(result.error_count));
+    }
+
+    Ok(data)
+}
+
+// Phase 2: Searching through the search space of file paths
+async fn search_file_path_data(data: &Data, args: &Arguments, query: Regex) -> Result<(Vec<String>, Duration)> {
+    let start = Instant::now();
+    let mut matches: Vec<PathBuf> =
+        search(&data.data, query, args.dirs, args.files, args.symlinks).await?;
+    let end = Instant::now();
+
+    if matches.is_empty() {
+        print!("\n"); // just adding a new line for better visual
+        error!("No matches were found.");
+        exit(1);
+    }
+
+    // mapping to a different type for terminal output
+    let matches: Vec<String> = matches.iter().map(|p| p.display().to_string()).collect();
+
+    Ok((matches, end - start))
+}
+
+// Phase 3: display the result file paths and let the user pick
+fn create_ui_list(matches: &[String], args: &Arguments) -> String {
+    if !args.output_file.is_none() {
+        // if an output file was specified
+        //
+        // `args.enumerate` by default false
+        return utils::pretty_interface(matches, args.enumerate);
+    }
+
+    // no specification of an output file
+    utils::pretty_interface(matches, true)
+}
+
+fn get_selected_path_from_user(matches: &[String], args: &Arguments) -> Option<String> {
+    // prompting a different message based on the argument given
+    match args.open {
+        true => println!(
+            "Please select the path via its index to open\n\
+Or press `Enter` to exit"
+        ),
+
+        false => println!(
+            "Please select the path via its index to copy onto the clipboard\n\
+Or press `Enter` to exit"
+        ),
+    }
+
+    utils::user_select(matches)
+}
+
+fn post_logic_processing(path: String, args: Arguments) -> Result<()> {
+    if let Some(mut cmd) = args.cmd {
+        cmd = utils::interpolate_to_command(cmd, &path);
+        utils::run_cmd(cmd)?;
+        return Ok(());
+    }
+
+    if args.open {
+        // user wants to open the file
+
+        utils::open_file(&path)?;
+        return Ok(());
+    }
+
+    utils::copy(path);
+    println!("Copied path onto the clipboard");
+
+    Ok(())
 }
 
 #[tokio::main]
@@ -170,141 +326,37 @@ async fn main() -> Result<()> {
         })
         .init();
 
-    let data: Data = if args.cache || args.use_cache || args.update_cache {
-        // If user wants to do anything with the cache
-        // obtaining the data from cache
-        cache.summon()?;
-        let data: Data = if cache.is_valid() && !args.update_cache {
-            // if cache is valid and user didn't specify to update the cache
-            if args.cache {
-                // it doesn't matter if the cache is valid,
-                // raising the --cache (-c) flag is reserved for
-                // solely caching; early exits. Otherwise, the user
-                // should be using the --update-cache flag to force an update.
-                exit(0); // user just wanted to cache
-            }
-            cache.read()?
-        } else {
-            // if cache is invalid or user wants to force an update
-            if !args.ignore_update {
-                // If the user didn't specify to ignore the validity of the cache
-                if args.log {
-                    warn!("Cache is invalid.");
-                    info!("Scanning directories...");
-                }
-
-                let start = Instant::now();
-                let result: ScanResult = scan(&path, args.depth, args.log, exclusion_set).await?;
-                let end = Instant::now();
-                let data: Data = Data::from(result.paths);
-
-                // cache is now updated
-                cache.write(&data)?;
-
-                if args.log {
-                    info!("Updated cache.");
-                    info!("Cached into `{}`", cache.location().display());
-                    print!("\n"); // new line for better visuals
-                    info!("Scanned in: {:?}\n", end - start);
-                    info!("Success: {}", utils::format_num(result.success_count));
-                    info!("Errors: {}", utils::format_num(result.error_count));
-                }
-
-                if args.cache {
-                    exit(0); // user just wanted to cache
-                }
-            }
-
-            cache.read()?
-        };
-
-        data
-    } else {
-        // no need to touch the cache because if was not indicated
-        if args.log {
-            info!("Scanning directories...");
-        }
-
-        let start = Instant::now();
-        let result: ScanResult = scan(&path, args.depth, args.log, exclusion_set).await?;
-        let end = Instant::now();
-        let data: Data = Data::from(result.paths);
-
-        if args.log {
-            print!("\n"); // a new line for better visuals
-            info!("Scanned in: {:?}\n", end - start);
-            info!("Success: {}", utils::format_num(result.success_count));
-            info!("Errors: {}", utils::format_num(result.error_count));
-        }
-
-        data
-    };
+    // Phase 1: retrieve the data by scanning directories or reading cache
+    let data = get_file_path_data(&args, &cache, exclusion_set).await?;
 
     // Next Step: Searching data
     if args.log {
         info!("Matching query...");
     }
 
-    let query: Regex = build_regex(args.query, args.cs, args.exact)?;
+    // Phase 2: searching the retrieved file paths for matches given a regex expression query
+    let query: Regex = build_regex(args.query.clone(), args.cs, args.exact)?;
 
-    let start = Instant::now();
-    let mut matches: Vec<PathBuf> =
-        search(&data.data, query, args.dirs, args.files, args.symlinks).await?;
-    let end = Instant::now();
+    let (matches, search_time) = search_file_path_data(&data, &args, query).await?;
 
-    // filtering based on argument specifications
-    //matches = filter_included_dirs(matches, &args.include);
-    //matches = filter_excluded_dirs(matches, &args.exclude);
-
-    if matches.is_empty() {
-        print!("\n"); // just adding a new line for better visual
-        error!("No matches were found.");
-        exit(1);
-    }
-
-    // mapping to a different type for terminal output
-    let matches: Vec<String> = matches.iter().map(|p| p.display().to_string()).collect();
-
-    let beautified_ui: String = if !args.output_file.is_none() {
-        // if an output file was specified
-        //
-        // `args.enumerate` by default false
-        utils::pretty_interface(&matches, args.enumerate)
-    } else {
-        // no specification of an output file
-        utils::pretty_interface(&matches, true)
-    };
+    // Phase 3: creating a ui for the user to pick a match
+    let ui_list = create_ui_list(&matches, &args);
 
     // in case of wanting to save to a file instead
     if let Some(file) = args.output_file {
         // Reminder: args.append is a boolean flag
-        let _ = utils::write_to(file, beautified_ui, args.append);
+        let _ = utils::write_to(file, ui_list, args.append);
         return Ok(());
     }
 
     // Displays the interface
-    println!("\n{}\n", beautified_ui);
+    println!("\n{}\n", ui_list);
 
     if args.log {
-        info!("Searched in: {:?}\n", end - start);
+        info!("Searched in: {:?}\n", search_time);
     }
 
-    let selected_path: Option<String> = {
-        // prompting a different message based on the argument given
-        match args.open {
-            true => println!(
-                "Please select the path via its index to open\n\
-Or press `Enter` to exit"
-            ),
-
-            false => println!(
-                "Please select the path via its index to copy onto the clipboard\n\
-Or press `Enter` to exit"
-            ),
-        }
-
-        utils::user_select(&matches)
-    };
+    let selected_path = get_selected_path_from_user(&matches, &args);
 
     // selected path
     let path: String = match selected_path {
@@ -312,22 +364,8 @@ Or press `Enter` to exit"
         None => return Ok(()), // user didn't select anything
     };
 
-    if let Some(mut cmd) = args.cmd {
-        cmd = utils::interpolate_to_command(cmd, &path);
-        utils::run_cmd(cmd)?;
-        return Ok(());
-    }
+    // Phase 4: executing post search logic
 
-    if args.open {
-        // user wants to open the file
-
-        utils::open_file(&path)?;
-        return Ok(());
-    }
-
-    // An interface to select and copy a path
-    utils::copy(path);
-    println!("Copied path onto the clipboard");
-
-    Ok(())
+    // letting the function consume path and args
+    post_logic_processing(path, args)
 }
