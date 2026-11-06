@@ -7,6 +7,7 @@
     * [ ] Decide on renaming the `--include` flag to `--parent` or `--ancestor`, which takes a list
 
 * [ ] Add the functionality for the `--exclude` (`-x`) flag to exclude result files as well
+    * [ ] Add a `--keep-result` flag to explicitly state to keep the result paths without filtering
 
 * [ ] Add an `--all` flag to apply logic to all result file paths
 
